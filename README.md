@@ -19,7 +19,7 @@ Use it in front of target server and let your client programs connect it, if tar
 drawn by https://asciiflow.com/
 ```
 
-Unlike reverse proxy, tcp connection between tcp-multiplexer and target server will be reused.
+Unlike reverse proxy, tcp connection between tcp-multiplexer and target server will be reused for all clients' tcp connections.
 
 ## supported application protocol
 
