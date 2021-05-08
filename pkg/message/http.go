@@ -38,7 +38,10 @@ func (H HTTPMessageReader) ReadMessage(conn io.Reader) ([]byte, error) {
 		return nil, err
 	}
 
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages#body
+	// 1. without body
 	var body []byte
+	// 2. Single-resource bodies: use Content-Length as size
 	if vv, ok := headers[contentLength]; ok {
 		size, err := strconv.Atoi(vv[0])
 		if err != nil {
@@ -51,6 +54,8 @@ func (H HTTPMessageReader) ReadMessage(conn io.Reader) ([]byte, error) {
 			return nil, err
 		}
 	}
+
+	// 3. Multiple-resource bodies
 
 	msg := dumpHTTPMessage(startLine, headers, body)
 
