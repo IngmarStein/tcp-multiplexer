@@ -68,7 +68,6 @@ var serverCmd = &cobra.Command{
 			if err != nil {
 				logrus.Error(err)
 				os.Exit(2)
-				return
 			}
 		}()
 
