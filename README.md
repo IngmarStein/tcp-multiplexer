@@ -27,6 +27,16 @@ Unlike reverse proxy, tcp connection between tcp-multiplexer and target server w
 2. http1 (not include https, websocket)
 3. iso8583 (with 2 bytes header of the length of iso8583 message)
 
+```
+$ ./tcp-multiplexer list                                    
+* iso8583
+* echo
+* http
+
+usage for example: ./tcp-multiplexer server -p echo
+
+```
+
 See detailed: https://github.com/XUJiahua/tcp-multiplexer/tree/master/example
 
 ## usage
