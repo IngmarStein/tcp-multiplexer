@@ -9,6 +9,10 @@ import (
 type ISO8583MessageReader struct {
 }
 
+func (I ISO8583MessageReader) Name() string {
+	return "iso8583"
+}
+
 // ReadMessage assume including a header with the length of the 8583 message
 // http://j8583.sourceforge.net/desc8583en.html
 // otherwise, we have to parse iso8583 message

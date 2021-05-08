@@ -18,6 +18,10 @@ import (
 type HTTPMessageReader struct {
 }
 
+func (H HTTPMessageReader) Name() string {
+	return "http"
+}
+
 const (
 	headerKeyContentLength = "Content-Length"
 	headerKeyContentType   = "Content-Type"

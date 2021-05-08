@@ -13,3 +13,6 @@ http-client-body:
 # TODO: to support
 http-client-form:
 	curl -v -X POST -F key1=value1 http://127.0.0.1:8000
+
+build:fmt
+	go build
