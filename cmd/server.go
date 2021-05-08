@@ -56,7 +56,7 @@ var serverCmd = &cobra.Command{
 		case "http":
 			msgReader = &message.HTTPMessageReader{}
 		case "iso8583":
-
+			msgReader = &message.ISO8583MessageReader{}
 		default:
 			logrus.Errorf("%s application protocol is not supported", applicationProtocol)
 			os.Exit(2)
