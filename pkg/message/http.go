@@ -3,11 +3,13 @@ package message
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/sirupsen/logrus"
 	"io"
 	"net/textproto"
 	"strconv"
+	"strings"
 )
 
 // https://tools.ietf.org/html/rfc2616
@@ -17,8 +19,11 @@ type HTTPMessageReader struct {
 }
 
 const (
-	contentLength = "Content-Length"
-	CRLF          = "\r\n"
+	headerKeyContentLength = "Content-Length"
+	headerKeyContentType   = "Content-Type"
+	headerFormContentType  = "multipart/form-data"
+	CRLF                   = "\r\n"
+	boundaryPrefix         = "boundary="
 )
 
 // support HTTP1 plaintext
@@ -32,30 +37,66 @@ func (H HTTPMessageReader) ReadMessage(conn io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	logrus.Debug(startLine)
 
 	headers, err := tp.ReadMIMEHeader()
 	if err != nil {
 		return nil, err
 	}
+	logrus.Debug(headers)
 
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages#body
 	// 1. without body
 	var body []byte
-	// 2. Single-resource bodies: use Content-Length as size
-	if vv, ok := headers[contentLength]; ok {
-		size, err := strconv.Atoi(vv[0])
-		if err != nil {
-			return nil, err
-		}
 
-		body = make([]byte, size)
-		_, err = tp.R.Read(body)
-		if err != nil {
-			return nil, err
+	// first check form type
+	isFormContentType := false
+	if vv, ok := headers[headerKeyContentType]; ok {
+		logrus.Debug(vv[0])
+		parts := strings.Split(vv[0], ";")
+		contentType := strings.TrimSpace(parts[0])
+		// 3. Multiple-resource bodies
+		if contentType == headerFormContentType {
+			isFormContentType = true
+			if len(parts) < 2 {
+				return nil, errors.New("expect boundary= part in " + headerKeyContentType)
+			}
+			boundaryPart := strings.TrimSpace(parts[1])
+			if !strings.HasPrefix(boundaryPart, boundaryPrefix) {
+				return nil, errors.New("expect boundary= part in " + headerKeyContentType)
+			}
+
+			lastBoundary := "--" + strings.TrimPrefix(boundaryPart, boundaryPrefix) + "--"
+			scanner := bufio.NewScanner(tp.R)
+			for scanner.Scan() {
+				line := scanner.Bytes()
+				body = append(body, line...)
+				body = append(body, []byte(CRLF)...)
+				if string(line) == lastBoundary {
+					break
+				}
+			}
+			if err := scanner.Err(); err != nil {
+				return nil, err
+			}
 		}
 	}
 
-	// 3. Multiple-resource bodies
+	// 2. Single-resource bodies: use Content-Length as size
+	if !isFormContentType {
+		if vv, ok := headers[headerKeyContentLength]; ok {
+			size, err := strconv.Atoi(vv[0])
+			if err != nil {
+				return nil, err
+			}
+
+			body = make([]byte, size)
+			_, err = tp.R.Read(body)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
 
 	msg := dumpHTTPMessage(startLine, headers, body)
 
