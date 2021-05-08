@@ -46,9 +46,23 @@ var serverCmd = &cobra.Command{
 		})
 		if verbose {
 			logrus.SetReportCaller(true)
+			logrus.SetLevel(logrus.DebugLevel)
 		}
 
-		mux := multiplexer.New(targetServer, port, &message.EchoMessageReader{})
+		var msgReader message.Reader
+		switch applicationProtocol {
+		case "echo":
+			msgReader = &message.EchoMessageReader{}
+		case "http":
+			msgReader = &message.HTTPMessageReader{}
+		case "iso8583":
+
+		default:
+			logrus.Errorf("%s application protocol is not supported", applicationProtocol)
+			os.Exit(2)
+		}
+
+		mux := multiplexer.New(targetServer, port, msgReader)
 		go func() {
 			err := mux.Start()
 			if err != nil {
