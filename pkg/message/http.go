@@ -46,6 +46,7 @@ func (H HTTPMessageReader) ReadMessage(conn io.Reader) ([]byte, error) {
 	logrus.Debug(headers)
 
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages#body
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages#body_2
 	// 1. without body
 	var body []byte
 
@@ -97,6 +98,9 @@ func (H HTTPMessageReader) ReadMessage(conn io.Reader) ([]byte, error) {
 			}
 		}
 	}
+
+	// TODO: 4. Transfer-Encoding
+	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Transfer-Encoding
 
 	msg := dumpHTTPMessage(startLine, headers, body)
 
