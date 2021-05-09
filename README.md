@@ -21,11 +21,32 @@ drawn by https://asciiflow.com/
 
 Unlike reverse proxy, tcp connection between tcp-multiplexer and target server will be reused for all clients' tcp connections.
 
+
+Multiplexer is simple. For every tcp connection from clients, the handling logic:
+
+```
+for {
+get lock...
+data pipe:
+	1. get request message from client
+	2. forward request message to target server
+	3. get response message from target server
+	4. forward response message to client
+release lock...
+}
+```
+
+lock make sure that at the same time, tcp connection to target server will be used in exactly one request-response loop. That's key point for every connection from clients share one tcp connection to target server.
+
+Next key point is how to detect message (e.g., HTTP Message format) from tcp data stream.
+
 ## supported application protocol
 
-1. echo
+Every application protocol has it's own message format. For now, support:
+
+1. echo: \n terminated
 2. http1 (not include https, websocket)
-3. iso8583 (with 2 bytes header of the length of iso8583 message)
+3. iso8583: with 2 bytes header of the length of iso8583 message
 
 ```
 $ ./tcp-multiplexer list                                    
