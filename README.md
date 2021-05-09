@@ -42,10 +42,10 @@ Next key point is how to detect message (e.g., HTTP Message format) from tcp dat
 
 ## supported application protocol
 
-Every application protocol has it's own message format. For now, support:
+Every application protocol (request–response message exchange pattern) has it's own message format. For now, support:
 
 1. echo: \n terminated
-2. http1 (not include https, websocket)
+2. http1 (not include https, websocket): not fully supported
 3. iso8583: with 2 bytes header of the length of iso8583 message
 
 ```
