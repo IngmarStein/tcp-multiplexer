@@ -16,6 +16,7 @@ func init() {
 		&EchoMessageReader{},
 		&HTTPMessageReader{},
 		&ISO8583MessageReader{},
+		&MPUMessageReader{},
 	} {
 		Readers[msgReader.Name()] = msgReader
 	}
