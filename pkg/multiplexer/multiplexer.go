@@ -1,6 +1,8 @@
 package multiplexer
 
 import (
+	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/sirupsen/logrus"
 	"github.com/xujiahua/tcp-multiplexer/pkg/message"
 	"io"
@@ -73,6 +75,11 @@ func (mux Multiplexer) handleConnection(conn net.Conn) {
 			break
 		}
 
+		if logrus.IsLevelEnabled(logrus.DebugLevel) {
+			fmt.Println("Message from Client...")
+			spew.Dump(msg)
+		}
+
 		// enqueue request msg
 		mux.requestQueue <- msg
 
@@ -134,6 +141,11 @@ func (mux Multiplexer) targetConnLoop() {
 		mux.responseQueue <- &responseWrapper{
 			message: msg,
 			err:     err,
+		}
+
+		if logrus.IsLevelEnabled(logrus.DebugLevel) {
+			fmt.Println("Message from Target Server...")
+			spew.Dump(msg)
 		}
 
 		if err != nil {
