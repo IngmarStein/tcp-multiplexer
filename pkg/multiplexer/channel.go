@@ -17,7 +17,7 @@ type reqContainer struct {
 }
 
 // mpscChannel make sender/receiver
-func mpscChannel(size int) (chan<- *reqContainer, <-chan *reqContainer) {
+func mpscChannel(size int) (chan<- *reqContainer, <-chan *reqContainer, chan *reqContainer) {
 	ch := make(chan *reqContainer, size)
-	return ch, ch
+	return ch, ch, ch
 }
