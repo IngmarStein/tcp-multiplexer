@@ -9,18 +9,12 @@ import (
 	"net"
 )
 
-type responseWrapper struct {
-	message []byte
-	err     error
-}
-
 type Multiplexer struct {
 	targetServer  string
 	port          string
-	requestQueue  chan []byte
-	responseQueue chan *responseWrapper
 	messageReader message.Reader
 	l             net.Listener
+	requestQueue  <-chan *reqContainer
 }
 
 func New(targetServer, port string, messageReader message.Reader) Multiplexer {
@@ -28,8 +22,6 @@ func New(targetServer, port string, messageReader message.Reader) Multiplexer {
 		targetServer:  targetServer,
 		port:          port,
 		messageReader: messageReader,
-		requestQueue:  make(chan []byte),
-		responseQueue: make(chan *responseWrapper),
 	}
 }
 
@@ -40,7 +32,9 @@ func (mux *Multiplexer) Start() error {
 		return err
 	}
 
-	go mux.targetConnLoop()
+	sender, receiver := mpscChannel(1)
+	mux.requestQueue = receiver
+	go mux.targetConnLoop(mux.requestQueue)
 
 	count := 0
 	for {
@@ -52,11 +46,11 @@ func (mux *Multiplexer) Start() error {
 		count++
 		logrus.Infof("#%d: %v <-> %v", count, conn.RemoteAddr(), conn.LocalAddr())
 
-		go mux.handleConnection(conn)
+		go mux.handleConnection(conn, sender)
 	}
 }
 
-func (mux Multiplexer) handleConnection(conn net.Conn) {
+func (mux Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContainer) {
 	defer func(c net.Conn) {
 		err := c.Close()
 		if err != nil {
@@ -80,17 +74,16 @@ func (mux Multiplexer) handleConnection(conn net.Conn) {
 			spew.Dump(msg)
 		}
 
-		// enqueue request msg
-		mux.requestQueue <- msg
+		callbackSender, callback := oneshotChannel()
 
-		// dequeue response msg
-		responseWrapper, ok := <-mux.responseQueue
-		if !ok {
-			// channel is closed, server is shutting down
-			logrus.Warn("response queue is closed")
-			break
+		// enqueue request msg
+		sender <- &reqContainer{
+			message: msg,
+			sender:  callbackSender,
 		}
 
+		// dequeue response msg
+		responseWrapper := <-callback
 		if responseWrapper.err != nil {
 			logrus.Errorf("failed to forward message, %v", err)
 			break
@@ -120,14 +113,14 @@ func (mux Multiplexer) createTargetConn() net.Conn {
 	}
 }
 
-func (mux Multiplexer) targetConnLoop() {
+func (mux Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 	conn := mux.createTargetConn()
 
-	for request := range mux.requestQueue {
+	for container := range requestQueue {
+		request := container.message
 		_, err := conn.Write(request)
 		if err != nil {
-			// NOTE: receive 1 request, must send 1 response, in case of mismatch
-			mux.responseQueue <- &responseWrapper{
+			container.sender <- &respContainer{
 				err: err,
 			}
 
@@ -138,7 +131,7 @@ func (mux Multiplexer) targetConnLoop() {
 		}
 
 		msg, err := mux.messageReader.ReadMessage(conn)
-		mux.responseQueue <- &responseWrapper{
+		container.sender <- &respContainer{
 			message: msg,
 			err:     err,
 		}
@@ -159,7 +152,5 @@ func (mux Multiplexer) targetConnLoop() {
 
 func (mux Multiplexer) Close() error {
 	logrus.Info("closing server...")
-	close(mux.requestQueue)
-	close(mux.responseQueue)
 	return mux.l.Close()
 }
