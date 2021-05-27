@@ -14,8 +14,9 @@ type Multiplexer struct {
 	port          string
 	messageReader message.Reader
 	l             net.Listener
-	stopped       bool
-	done          chan struct{}
+	quit          chan struct{}
+	wg            *sync.WaitGroup
+	requestQueue  chan *reqContainer
 }
 
 func New(targetServer, port string, messageReader message.Reader) Multiplexer {
@@ -23,8 +24,7 @@ func New(targetServer, port string, messageReader message.Reader) Multiplexer {
 		targetServer:  targetServer,
 		port:          port,
 		messageReader: messageReader,
-		stopped:       false,
-		done:          make(chan struct{}),
+		quit:          make(chan struct{}),
 	}
 }
 
@@ -35,58 +35,51 @@ func (mux *Multiplexer) Start() error {
 		return err
 	}
 
-	sender, receiver, requestQueue := mpscChannel(1)
-	go mux.targetConnLoop(receiver)
-
 	var wg sync.WaitGroup
-	count := 0
-	for {
-		// stop accepting new connections
-		if mux.stopped {
-			logrus.Info("no more connections will be accepted")
-			break
-		}
+	mux.wg = &wg
 
+	sender, receiver, requestQueue := mpscChannel(1)
+	mux.requestQueue = requestQueue
+
+	// target connection loop
+	go func() {
+		mux.targetConnLoop(receiver)
+	}()
+
+	count := 0
+L:
+	for {
 		conn, err := mux.l.Accept()
 		if err != nil {
 			logrus.Error(err)
-			continue
+			select {
+			case <-mux.quit:
+				logrus.Info("no more connections will be accepted")
+				return nil
+			default:
+				goto L
+			}
 		}
 		count++
 		logrus.Infof("#%d: %v <-> %v", count, conn.RemoteAddr(), conn.LocalAddr())
 
 		wg.Add(1)
-		go mux.handleConnection(conn, sender, &wg)
+		go func() {
+			mux.handleConnection(conn, sender)
+			wg.Done()
+		}()
 	}
-
-	// wait all connections closed
-	wg.Wait()
-	// stop target conn loop
-	close(requestQueue)
-	// notify Close
-	close(mux.done)
-	logrus.Info("multiplexer server stopped gracefully")
-	return nil
 }
 
-func (mux Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContainer, wg *sync.WaitGroup) {
+func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContainer) {
 	defer func(c net.Conn) {
 		err := c.Close()
 		if err != nil {
 			logrus.Errorf("%v", err)
 		}
-
-		// mark connection completed
-		wg.Done()
 	}(conn)
 
 	for {
-		// stop existing connections
-		if mux.stopped {
-			logrus.Info("no more messages will be accepted")
-			break
-		}
-
 		msg, err := mux.messageReader.ReadMessage(conn)
 		if err == io.EOF {
 			logrus.Infof("closed: %v <-> %v", conn.RemoteAddr(), conn.LocalAddr())
@@ -182,9 +175,21 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 
 // Close graceful shutdown
 func (mux *Multiplexer) Close() error {
-	mux.stopped = true
+	close(mux.quit)
 	logrus.Info("closing server...")
-	<-mux.done
-	logrus.Info("server is closed")
+	err := mux.l.Close()
+	if err != nil {
+		return err
+	}
+
+	logrus.Debug("wait all incoming connections closed")
+	mux.wg.Wait()
+	logrus.Info("incoming connections closed")
+
+	// stop target conn loop
+	close(mux.requestQueue)
+
+	logrus.Info("multiplexer server stopped gracefully")
+	logrus.Info("server is closed gracefully")
 	return nil
 }
