@@ -17,6 +17,7 @@ func init() {
 		&HTTPMessageReader{},
 		&ISO8583MessageReader{},
 		&MPUMessageReader{},
+		&ModbusMessageReader{},
 	} {
 		Readers[msgReader.Name()] = msgReader
 	}

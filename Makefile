@@ -1,4 +1,4 @@
-.phony: fmt run run-8583 echo-client http-client-nobody http-client-body http-client-form build
+.phony: fmt run run-8583 run-modbus echo-client http-client-nobody http-client-body http-client-form build
 
 fmt:
 	go fmt ./...
@@ -6,6 +6,8 @@ run: fmt
 	go run main.go server -v -p http
 run-8583: fmt
 	go run main.go server -v -p iso8583
+run-modbus: fmt
+	go run main.go server -v -p modbus
 echo-client:
 	nc 127.0.0.1 8000
 http-client-nobody:

@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"time"
 )
 
 type Multiplexer struct {
@@ -125,7 +126,8 @@ func (mux Multiplexer) createTargetConn() net.Conn {
 		conn, err := net.Dial("tcp", mux.targetServer)
 		if err != nil {
 			logrus.Errorf("failed to connect to target server %s, %v", mux.targetServer, err)
-			// TODO: sleep for a while?
+			// TODO: make sleep time configurable
+			time.Sleep(1 * time.Second)
 			continue
 		}
 
