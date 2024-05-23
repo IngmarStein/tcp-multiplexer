@@ -10,6 +10,16 @@ import (
 	"time"
 )
 
+type reqContainer struct {
+	message []byte
+	sender  chan<- *respContainer
+}
+
+type respContainer struct {
+	message []byte
+	err     error
+}
+
 type Multiplexer struct {
 	targetServer  string
 	port          string
@@ -39,12 +49,12 @@ func (mux *Multiplexer) Start() error {
 	var wg sync.WaitGroup
 	mux.wg = &wg
 
-	sender, receiver, requestQueue := mpscChannel(1)
+	requestQueue := make(chan *reqContainer, 1)
 	mux.requestQueue = requestQueue
 
 	// target connection loop
 	go func() {
-		mux.targetConnLoop(receiver)
+		mux.targetConnLoop(requestQueue)
 	}()
 
 	count := 0
@@ -66,7 +76,7 @@ L:
 
 		wg.Add(1)
 		go func() {
-			mux.handleConnection(conn, sender)
+			mux.handleConnection(conn, requestQueue)
 			wg.Done()
 		}()
 	}
@@ -80,6 +90,7 @@ func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContai
 		}
 	}(conn)
 
+	callback := make(chan *respContainer)
 	for {
 		msg, err := mux.messageReader.ReadMessage(conn)
 		if err == io.EOF {
@@ -96,12 +107,10 @@ func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContai
 			spew.Dump(msg)
 		}
 
-		callbackSender, callback := oneshotChannel()
-
 		// enqueue request msg to target conn loop
 		sender <- &reqContainer{
 			message: msg,
-			sender:  callbackSender,
+			sender:  callback,
 		}
 
 		// get response from target conn loop
@@ -120,7 +129,7 @@ func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContai
 	}
 }
 
-func (mux Multiplexer) createTargetConn() net.Conn {
+func (mux *Multiplexer) createTargetConn() net.Conn {
 	for {
 		logrus.Info("creating target connection")
 		conn, err := net.Dial("tcp", mux.targetServer)
