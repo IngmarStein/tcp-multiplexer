@@ -18,7 +18,7 @@ func (M MPUMessageReader) ReadMessage(conn io.Reader) ([]byte, error) {
 	}
 
 	headerStr := string(header)
-	length, err:= strconv.Atoi(headerStr)
+	length, err := strconv.Atoi(headerStr)
 	if err != nil {
 		return nil, err
 	}

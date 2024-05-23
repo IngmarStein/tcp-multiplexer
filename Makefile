@@ -1,8 +1,10 @@
+.phony: fmt run run-8583 echo-client http-client-nobody http-client-body http-client-form build
+
 fmt:
 	go fmt ./...
-run:fmt
+run: fmt
 	go run main.go server -v -p http
-run-8583:fmt
+run-8583: fmt
 	go run main.go server -v -p iso8583
 echo-client:
 	nc 127.0.0.1 8000
@@ -14,5 +16,5 @@ http-client-body:
 http-client-form:
 	curl -v -X POST -F key1=value1 http://127.0.0.1:8000
 
-build:fmt
+build: fmt
 	go build

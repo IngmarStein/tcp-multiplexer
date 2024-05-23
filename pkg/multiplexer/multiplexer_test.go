@@ -2,9 +2,9 @@ package multiplexer
 
 import (
 	"fmt"
+	"github.com/ingmarstein/tcp-multiplexer/pkg/message"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"github.com/xujiahua/tcp-multiplexer/pkg/message"
 	"net"
 	"os"
 	"sync"

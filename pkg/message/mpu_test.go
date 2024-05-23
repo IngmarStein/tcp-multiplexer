@@ -19,7 +19,7 @@ func TestMPUMessageReader_ReadMessage(t *testing.T) {
 	buf.WriteString("another message")
 	spew.Dump(buf.Bytes())
 
-	iso, err:= MPUMessageReader{}.ReadMessage(bytes.NewReader(buf.Bytes()))
+	iso, err := MPUMessageReader{}.ReadMessage(bytes.NewReader(buf.Bytes()))
 	assert.Equal(t, nil, err)
 	spew.Dump(iso)
 }

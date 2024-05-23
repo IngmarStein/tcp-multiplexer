@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/xujiahua/tcp-multiplexer/pkg/message"
+	"github.com/ingmarstein/tcp-multiplexer/pkg/message"
 	"io"
 	"net"
 	"os"

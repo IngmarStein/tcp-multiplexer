@@ -22,9 +22,9 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"github.com/ingmarstein/tcp-multiplexer/pkg/message"
+	"github.com/ingmarstein/tcp-multiplexer/pkg/multiplexer"
 	"github.com/sirupsen/logrus"
-	"github.com/xujiahua/tcp-multiplexer/pkg/message"
-	"github.com/xujiahua/tcp-multiplexer/pkg/multiplexer"
 	"os"
 	"os/signal"
 	"syscall"

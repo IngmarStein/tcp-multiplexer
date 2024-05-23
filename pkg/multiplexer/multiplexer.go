@@ -2,8 +2,8 @@ package multiplexer
 
 import (
 	"github.com/davecgh/go-spew/spew"
+	"github.com/ingmarstein/tcp-multiplexer/pkg/message"
 	"github.com/sirupsen/logrus"
-	"github.com/xujiahua/tcp-multiplexer/pkg/message"
 	"io"
 	"net"
 	"sync"

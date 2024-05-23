@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 package main
 
-import "github.com/xujiahua/tcp-multiplexer/cmd"
+import "github.com/ingmarstein/tcp-multiplexer/cmd"
 
 func main() {
 	cmd.Execute()

@@ -6,7 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/xujiahua/tcp-multiplexer/pkg/message"
+	"github.com/ingmarstein/tcp-multiplexer/pkg/message"
 	"net"
 	"os"
 )
