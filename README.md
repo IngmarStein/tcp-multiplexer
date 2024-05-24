@@ -1,9 +1,10 @@
-
 # tcp-multiplexer
 
-Use it in front of target server and let your client programs connect it, if target server **only allows you to create limited tcp connections concurrently**. While it has its limitation: increased latency as incoming request will block each other. Suitable for testing purpose.
+Use it in front of a target server and let your client programs connect it, if target server **only allows you to create
+a limited TCP connections concurrently**. While it has its limitation: increased latency as incoming request will block
+each other.
 
-## arch
+## Architecture
 
 ```
 ┌──────────┐
@@ -14,15 +15,15 @@ Use it in front of target server and let your client programs connect it, if tar
   └───────────┘      └─────────────────┘      └───────────────┘
 
 
-─────► tcp connection
+─────► TCP connection
 
 drawn by https://asciiflow.com/
 ```
 
-Unlike reverse proxy, tcp connection between tcp-multiplexer and target server will be reused for all clients' tcp connections.
+Unlike with a reverse proxy, the TCP connection between `tcp-multiplexer` and the target server will be reused for all
+clients' TCP connections.
 
-
-Multiplexer is simple. For every tcp connection from clients, the handling logic:
+Multiplexer is simple. For every TCP connection from clients, the handling logic:
 
 ```
 for {
@@ -36,31 +37,35 @@ release lock...
 }
 ```
 
-lock make sure that at the same time, tcp connection to target server will be used in exactly one request-response loop. That's key point for every connection from clients share one tcp connection to target server.
+The lock makes sure that at any time, the TCP connection to the target server will be used in exactly one
+request-response loop.
+This way, all connections from clients share one TCP connection to the target server.
 
-Next key point is how to detect message (e.g., HTTP Message format) from tcp data stream.
+Next key point is how to detect message (e.g., HTTP) from the TCP data stream.
 
-## supported application protocol
+## Supported application protocols
 
-Every application protocol (request–response message exchange pattern) has it's own message format. For now, support:
+Every application protocol (request–response message exchange pattern) has its own message format. For now, support:
 
 1. echo: \n terminated
 2. http1 (not include https, websocket): not fully supported
 3. iso8583: with 2 bytes header of the length of iso8583 message
+4. modbus-tcp
 
 ```
 $ ./tcp-multiplexer list                                    
 * iso8583
 * echo
 * http
+* modbus
 
 usage for example: ./tcp-multiplexer server -p echo
 
 ```
 
-See detailed: https://github.com/XUJiahua/tcp-multiplexer/tree/master/example
+See detailed: https://github.com/ingmarstein/tcp-multiplexer/tree/master/example
 
-## usage
+## Usage
 
 ```
 $ ./tcp-multiplexer server -h
@@ -79,16 +84,22 @@ Global Flags:
   -v, --verbose   verbose log
 ```
 
-### multiplexing echo server
+#### In a container
+```
+docker run ghcr.io/ingmarstein/tcp-multiplexer server -t 127.0.0.1:1234 -l 8000 -p modbus
+```
+Alternatively, use the included `compose.yml` file as a template if you prefer to use Docker Compose.
 
-start echo server (listen on port 1234)
+### Multiplexing echo server
+
+Start echo server (listen on port 1234)
 
 ```
 $ go run example/echo-server/main.go
 1: 127.0.0.1:1234 <-> 127.0.0.1:58088
 ```
 
-start tcp multiplexing (listen on port 8000)
+Start TCP multiplexing (listen on port 8000)
 
 ```
 $ ./tcp-multiplexer server -p echo -t 127.0.0.1:1234 -l 8000
@@ -110,7 +121,3 @@ $ nc 127.0.0.1 8000
 mmm
 mmm
 ```
-
-
-
-

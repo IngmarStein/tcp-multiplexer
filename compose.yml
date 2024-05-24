@@ -1,0 +1,8 @@
+services:
+  modbus-proxy:
+    image: ghcr.io/ingmarstein/tcp-multiplexer
+    container_name: modbus_proxy
+    ports:
+      - "5020:5020"
+    command: [ "server", "-t", "192.168.1.22:1502", "-l", "5020", "-p", "modbus", "-v" ]
+    restart: unless-stopped
