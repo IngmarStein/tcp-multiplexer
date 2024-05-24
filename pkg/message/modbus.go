@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	maxTCPFrameLength int = 260
-	mbapHeaderLength  int = 7
+	maxTCPFrameLength = 260
+	mbapHeaderLength  = 6
 )
 
 type ModbusMessageReader struct {
