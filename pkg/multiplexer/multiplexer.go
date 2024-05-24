@@ -198,6 +198,7 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 				if err != nil {
 					logrus.Error(err)
 				}
+				conn = nil
 			}
 			continue
 		case Packet:
