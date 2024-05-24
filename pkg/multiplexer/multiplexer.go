@@ -118,7 +118,6 @@ func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContai
 			logrus.Errorf("error setting read deadline: %v", err)
 		}
 		msg, err := mux.messageReader.ReadMessage(conn)
-		logrus.Debug("Done reading from client...")
 		if err == io.EOF {
 			logrus.Infof("closed: %v <-> %v", conn.RemoteAddr(), conn.LocalAddr())
 			break
