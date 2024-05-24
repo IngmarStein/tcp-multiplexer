@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  packages: write
+  attestations: write
 
 jobs:
   goreleaser:

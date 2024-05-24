@@ -10,8 +10,10 @@ builds:
       - -s -w -X github.com/ingmarstein/tcp-multiplexer/cmd.version={{.Version}} -X github.com/ingmarstein/tcp-multiplexer/cmd.commit={{.Commit}} -X github.com/ingmarstein/tcp-multiplexer/cmd.date={{.Date}} -X github.com/ingmarstein/tcp-multiplexer/cmd.builtBy=goreleaser
     goos:
       - linux
-      - windows
       - darwin
+    goarch:
+      - amd64
+      - arch64
 archives:
   - name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
 checksum:
@@ -24,6 +26,15 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
-dockers:
-  - image_templates:
-      - ingmarstein/tcp-multiplexer
+kos:
+  - repository: ghcr.io/ingmarstein/tcp-multiplexer
+    tags:
+      - '{{.Version}}'
+      - latest
+    bare: true
+    preserve_import_paths: false
+    platforms:
+      - linux/amd64
+      - linux/arm64
+docker_signs:
+  - artifacts: manifests

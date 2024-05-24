@@ -94,7 +94,7 @@ L:
 func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContainer) {
 	defer func(c net.Conn) {
 		if logrus.IsLevelEnabled(logrus.DebugLevel) {
-			logrus.Debugf("Closing client connecion: %v", c.RemoteAddr())
+			logrus.Debugf("Closing client connection: %v", c.RemoteAddr())
 		}
 		err := c.Close()
 		sender <- &reqContainer{typ: Disconnection}
