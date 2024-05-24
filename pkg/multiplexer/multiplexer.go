@@ -128,8 +128,7 @@ func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContai
 		}
 
 		if logrus.IsLevelEnabled(logrus.DebugLevel) {
-			logrus.Debug("Message from client...")
-			spew.Dump(msg)
+			logrus.Debug("Message from client...\n%s", spew.Sdump(msg))
 		}
 
 		// enqueue request msg to target conn loop
@@ -142,7 +141,7 @@ func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContai
 		// get response from target conn loop
 		resp := <-callback
 		if resp.err != nil {
-			logrus.Errorf("failed to forward message, %v", err)
+			logrus.Errorf("failed to forward message, %v", resp.err)
 			break
 		}
 
@@ -183,15 +182,11 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 		switch container.typ {
 		case Connection:
 			clients++
-			if logrus.IsLevelEnabled(logrus.DebugLevel) {
-				logrus.Debugf("Connected clients: %d", clients)
-			}
+			logrus.Infof("Connected clients: %d", clients)
 			continue
 		case Disconnection:
 			clients--
-			if logrus.IsLevelEnabled(logrus.DebugLevel) {
-				logrus.Debugf("Connected clients: %d", clients)
-			}
+			logrus.Infof("Connected clients: %d", clients)
 			if clients == 0 && conn != nil {
 				logrus.Info("closing target connection")
 				err := conn.Close()
@@ -224,7 +219,7 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 			// renew conn
 			err = conn.Close()
 			if err != nil {
-				logrus.Error(err)
+				logrus.Error("error while closing connection: %v", err)
 			}
 			conn = nil
 			continue
@@ -242,8 +237,7 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 		}
 
 		if logrus.IsLevelEnabled(logrus.DebugLevel) {
-			logrus.Debug("Message from target server...")
-			spew.Dump(msg)
+			logrus.Debug("Message from target server...\n%s", spew.Sdump(msg))
 		}
 
 		if err != nil {
@@ -251,7 +245,7 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 			// renew conn
 			err = conn.Close()
 			if err != nil {
-				logrus.Error(err)
+				logrus.Error("error while closing connection: %v", err)
 			}
 			conn = nil
 			continue
