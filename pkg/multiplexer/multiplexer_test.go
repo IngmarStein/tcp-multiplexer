@@ -1,10 +1,12 @@
 package multiplexer
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/ingmarstein/tcp-multiplexer/pkg/message"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"io"
 	"net"
 	"os"
 	"sync"
@@ -42,13 +44,49 @@ func client(t *testing.T, server string, clientIndex int) {
 	fmt.Println("client connection closed")
 }
 
-// target server
-// cd example/echo-server
-// go run main.go
+func handleConnection(conn net.Conn) {
+	defer func(c net.Conn) {
+		err := c.Close()
+		if err != nil {
+			fmt.Println(err)
+		}
+	}(conn)
+
+	for {
+		data, err := bufio.NewReader(conn).ReadBytes('\n')
+		if err == io.EOF {
+			fmt.Println("connection is closed")
+			break
+		}
+		if err != nil {
+			fmt.Println(err)
+			break
+		}
+
+		_, err = conn.Write(data)
+		if err != nil {
+			fmt.Println(err)
+			break
+		}
+	}
+}
+
 func TestMultiplexer_Start(t *testing.T) {
-	const targetServer = "127.0.0.1:1234"
+	l, err := net.Listen("tcp", ":0")
+	go func() {
+		defer l.Close()
+		for {
+			conn, err := l.Accept()
+			if err != nil {
+				fmt.Println(err)
+				break
+			}
+			go handleConnection(conn)
+		}
+	}()
 	const muxServer = "127.0.0.1:1235"
-	mux := New(targetServer, "1235", message.EchoMessageReader{})
+
+	mux := New(l.Addr().String(), "1235", message.EchoMessageReader{})
 
 	go func() {
 		err := mux.Start()
@@ -71,6 +109,6 @@ func TestMultiplexer_Start(t *testing.T) {
 	wg.Wait()
 	time.Sleep(time.Second)
 
-	err := mux.Close()
+	err = mux.Close()
 	assert.Equal(t, nil, err)
 }
