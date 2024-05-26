@@ -36,3 +36,12 @@ kos:
     platforms:
       - linux/amd64
       - linux/arm64
+  - repository: ingmarstein/tcp-multiplexer
+    tags:
+      - '{{.Version}}'
+      - latest
+    bare: true
+    preserve_import_paths: false
+    platforms:
+      - linux/amd64
+      - linux/arm64
