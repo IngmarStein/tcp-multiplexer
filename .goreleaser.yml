@@ -27,7 +27,9 @@ changelog:
       - '^docs:'
       - '^test:'
 kos:
-  - repository: ghcr.io/ingmarstein/tcp-multiplexer
+  - id: tcp-multiplexer-ghcr
+    build: tcp-multiplexer
+    repository: ghcr.io/ingmarstein/tcp-multiplexer
     tags:
       - '{{.Version}}'
       - latest
@@ -36,7 +38,9 @@ kos:
     platforms:
       - linux/amd64
       - linux/arm64
-  - repository: ingmarstein/tcp-multiplexer
+  - id: tcp-multiplexer-dockerhub
+    build: tcp-multiplexer
+    repository: ingmarstein/tcp-multiplexer
     tags:
       - '{{.Version}}'
       - latest
