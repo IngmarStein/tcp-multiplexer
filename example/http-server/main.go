@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"github.com/davecgh/go-spew/spew"
+	"html"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -23,16 +24,8 @@ func headers(w http.ResponseWriter, req *http.Request) {
 	}
 	spew.Dump(dump)
 
-	for name, headers := range req.Header {
-		for _, h := range headers {
-
-			_, err := fmt.Fprintf(w, "%v: %v\n", name, h)
-			if err != nil {
-				fmt.Printf("Error writing header %s: %v\n", name, err)
-				return
-			}
-		}
-	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write([]byte(html.EscapeString(string(dump))))
 }
 
 func main() {
