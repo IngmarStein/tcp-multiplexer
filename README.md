@@ -1,8 +1,11 @@
 # tcp-multiplexer
 
-Use it in front of a target server and let your client programs connect it, if target server **only allows you to create
-a limited TCP connections concurrently**. While it has its limitation: increased latency as incoming request will block
-each other.
+Use it in front of a target server and let your client programs connect to it, if target server **only allows you to
+create a limited number of TCP connections concurrently**. While it has its limitation: increased latency as incoming
+request will block each other.
+
+A common use case for tcp-multiplexer is to allow multiple modbus/TCP clients connect to solar inverters which often
+only support a single TCP connection.
 
 ## Architecture
 
@@ -45,10 +48,11 @@ Next key point is how to detect message (e.g., HTTP) from the TCP data stream.
 
 ## Supported application protocols
 
-Every application protocol (request–response message exchange pattern) has its own message format. For now, support:
+Every application protocol (request–response message exchange pattern) has its own message format. The following formats
+are supported currently:
 
 1. echo: \n terminated
-2. http1 (not include https, websocket): not fully supported
+2. http1 (not including https, websocket): not fully supported
 3. iso8583: with 2 bytes header of the length of iso8583 message
 4. modbus-tcp
 
@@ -60,7 +64,6 @@ $ ./tcp-multiplexer list
 * modbus
 
 usage for example: ./tcp-multiplexer server -p echo
-
 ```
 
 See detailed: https://github.com/ingmarstein/tcp-multiplexer/tree/master/example
@@ -85,12 +88,14 @@ Global Flags:
 ```
 
 #### In a container
+
 ```
 docker run ghcr.io/ingmarstein/tcp-multiplexer server -t 127.0.0.1:1234 -l 8000 -p modbus
 ```
+
 Alternatively, use the included `compose.yml` file as a template if you prefer to use Docker Compose.
 
-### Multiplexing echo server
+## Testing
 
 Start echo server (listen on port 1234)
 
