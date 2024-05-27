@@ -25,7 +25,12 @@ func headers(w http.ResponseWriter, req *http.Request) {
 
 	for name, headers := range req.Header {
 		for _, h := range headers {
-			fmt.Fprintf(w, "%v: %v\n", name, h)
+
+			_, err := fmt.Fprintf(w, "%v: %v\n", name, h)
+			if err != nil {
+				fmt.Printf("Error writing header %s: %v\n", name, err)
+				return
+			}
 		}
 	}
 }
@@ -33,5 +38,9 @@ func headers(w http.ResponseWriter, req *http.Request) {
 func main() {
 	http.HandleFunc("/", headers)
 
-	http.ListenAndServe(":"+getPort(), nil)
+	port := getPort()
+	err := http.ListenAndServe(":"+port, nil)
+	if err != nil {
+		fmt.Printf("Error listening on port %s: %v\n", port, err)
+	}
 }
