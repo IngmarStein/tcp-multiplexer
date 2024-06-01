@@ -28,6 +28,7 @@ import (
 )
 
 var verbose bool
+var debug bool
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -49,4 +50,5 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose log")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "debug", "d", false, "debug log")
 }

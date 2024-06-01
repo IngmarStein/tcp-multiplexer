@@ -44,7 +44,11 @@ var serverCmd = &cobra.Command{
 		logrus.SetFormatter(&logrus.TextFormatter{
 			FullTimestamp: true,
 		})
+		logrus.SetLevel(logrus.WarnLevel)
 		if verbose {
+			logrus.SetLevel(logrus.InfoLevel)
+		}
+		if debug {
 			logrus.SetReportCaller(true)
 			logrus.SetLevel(logrus.DebugLevel)
 		}
