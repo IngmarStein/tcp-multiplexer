@@ -77,12 +77,12 @@ L:
 	for {
 		conn, err := mux.l.Accept()
 		if err != nil {
-			logrus.Error(err)
 			select {
 			case <-mux.quit:
 				logrus.Info("no more connections will be accepted")
 				return nil
 			default:
+				logrus.Error(err)
 				goto L
 			}
 		}
