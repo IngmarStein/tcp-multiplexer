@@ -1,4 +1,6 @@
-.phony: fmt run run-8583 run-modbus echo-client http-client-nobody http-client-body http-client-form build test vet
+.phony: all clean fmt run run-8583 run-modbus echo-client http-client-nobody http-client-body http-client-form build test vet
+
+all: build
 
 fmt:
 	go fmt ./...
@@ -23,4 +25,7 @@ vet:
 	go vet ./...
 
 build: fmt
-	go build
+	CGO_ENABLED=0 go build
+
+clean:
+	rm -f tcp-multiplexer
