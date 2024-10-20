@@ -13,6 +13,7 @@ builds:
     goarch:
       - amd64
       - arm64
+      - arm
 archives:
   - name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
 checksum:
@@ -37,6 +38,7 @@ kos:
     platforms:
       - linux/amd64
       - linux/arm64
+      - linux/arm/v6
   - id: tcp-multiplexer-dockerhub
     build: tcp-multiplexer
     repository: ingmarstein/tcp-multiplexer
@@ -48,3 +50,4 @@ kos:
     platforms:
       - linux/amd64
       - linux/arm64
+      - linux/arm/v6
