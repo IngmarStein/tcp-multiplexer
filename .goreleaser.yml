@@ -14,6 +14,9 @@ builds:
       - amd64
       - arm64
       - arm
+    goarm:
+      - "6"
+      - "7"
 archives:
   - name_template: '{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}'
 checksum:
@@ -26,30 +29,59 @@ changelog:
     exclude:
       - '^docs:'
       - '^test:'
-kos:
-  - id: tcp-multiplexer-ghcr
-    build: tcp-multiplexer
-    repository: ghcr.io/ingmarstein/tcp-multiplexer
-    tags:
-      - '{{.Version}}'
-      - latest
-    bare: true
-    preserve_import_paths: false
-    platforms:
-      - linux/amd64
-      - linux/arm64
-      - linux/arm/v6
-      - linux/arm/v7
-  - id: tcp-multiplexer-dockerhub
-    build: tcp-multiplexer
-    repository: ingmarstein/tcp-multiplexer
-    tags:
-      - '{{.Version}}'
-      - latest
-    bare: true
-    preserve_import_paths: false
-    platforms:
-      - linux/amd64
-      - linux/arm64
-      - linux/arm/v6
-      - linux/arm/v7
+dockers:
+  - image_templates:
+      - "docker.io/ingmarstein/tcp-multiplexer:{{ .Version }}-amd64"
+      - "docker.io/ingmarstein/tcp-multiplexer:latest-amd64"
+      - "ghcr.io/ingmarstein/tcp-multiplexer:{{ .Version }}-amd64"
+      - "ghcr.io/ingmarstein/tcp-multiplexer:latest-amd64"
+    use: buildx
+    goarch: amd64
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/amd64"
+  - image_templates:
+      - "docker.io/ingmarstein/tcp-multiplexer:{{ .Version }}-arm64"
+      - "docker.io/ingmarstein/tcp-multiplexer:latest-arm64"
+      - "ghcr.io/ingmarstein/tcp-multiplexer:{{ .Version }}-arm64"
+      - "ghcr.io/ingmarstein/tcp-multiplexer:latest-arm64"
+    use: buildx
+    goarch: arm64
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/arm64"
+  - image_templates:
+      - "docker.io/ingmarstein/tcp-multiplexer:{{ .Version }}-arm-v6"
+      - "docker.io/ingmarstein/tcp-multiplexer:latest-arm-v6"
+      - "ghcr.io/ingmarstein/tcp-multiplexer:{{ .Version }}-arm-v6"
+      - "ghcr.io/ingmarstein/tcp-multiplexer:latest-arm-v6"
+    use: buildx
+    goarch: arm
+    goarm: "6"
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/arm/v6"
+  - image_templates:
+      - "docker.io/ingmarstein/tcp-multiplexer:{{ .Version }}-arm-v7"
+      - "docker.io/ingmarstein/tcp-multiplexer:latest-arm-v7"
+      - "ghcr.io/ingmarstein/tcp-multiplexer:{{ .Version }}-arm-v7"
+      - "ghcr.io/ingmarstein/tcp-multiplexer:latest-arm-v7"
+    use: buildx
+    goarch: arm
+    goarm: "7"
+    dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/arm/v7"
+docker_manifests:
+  - name_template: "ingmarstein/tcp-multiplexer:{{ .Version }}"
+    image_templates:
+      - "ingmarstein/tcp-multiplexer:{{ .Version }}-amd64"
+      - "ingmarstein/tcp-multiplexer:{{ .Version }}-arm64"
+      - "ingmarstein/tcp-multiplexer:{{ .Version }}-arm-v6"
+      - "ingmarstein/tcp-multiplexer:{{ .Version }}-arm-v7"
+  - name_template: "ingmarstein/tcp-multiplexer:latest"
+    image_templates:
+      - "ingmarstein/tcp-multiplexer:latest-amd64"
+      - "ingmarstein/tcp-multiplexer:latest-arm64"
+      - "ingmarstein/tcp-multiplexer:latest-arm-v6"
+      - "ingmarstein/tcp-multiplexer:latest-arm-v7"
