@@ -3,9 +3,9 @@ package message
 import (
 	"bytes"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 func TestMPUMessageReader_ReadMessage(t *testing.T) {
@@ -20,6 +20,8 @@ func TestMPUMessageReader_ReadMessage(t *testing.T) {
 	spew.Dump(buf.Bytes())
 
 	iso, err := MPUMessageReader{}.ReadMessage(bytes.NewReader(buf.Bytes()))
-	assert.Equal(t, nil, err)
+	if err != nil {
+		t.Fatal("Expected no error, but got:", err)
+	}
 	spew.Dump(iso)
 }

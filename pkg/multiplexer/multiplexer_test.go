@@ -2,20 +2,21 @@ package multiplexer
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
-	"github.com/ingmarstein/tcp-multiplexer/pkg/message"
-	"github.com/sirupsen/logrus"
-	"github.com/stretchr/testify/assert"
 	"io"
+	"log/slog"
 	"net"
 	"os"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/ingmarstein/tcp-multiplexer/pkg/message"
 )
 
 func init() {
-	logrus.SetLevel(logrus.InfoLevel)
+	slog.SetLogLoggerLevel(slog.LevelInfo)
 }
 
 func handleErr(err error) {
@@ -38,7 +39,9 @@ func client(t *testing.T, server string, clientIndex int) {
 		echoReply, err := message.EchoMessageReader{}.ReadMessage(conn)
 		handleErr(err)
 
-		assert.Equal(t, echo, echoReply)
+		if bytes.Compare(echo, echoReply) != 0 {
+			t.Fatalf("Expected %s, but got %s", echo, echoReply)
+		}
 	}
 
 	fmt.Println("client connection closed")
@@ -88,9 +91,9 @@ func TestMultiplexer_Start(t *testing.T) {
 
 	mux := New(l.Addr().String(), "1235", message.EchoMessageReader{})
 
+	errChan := make(chan error, 1)
 	go func() {
-		err := mux.Start()
-		assert.Equal(t, nil, err)
+		errChan <- mux.Start()
 	}()
 
 	time.Sleep(time.Second)
@@ -109,6 +112,15 @@ func TestMultiplexer_Start(t *testing.T) {
 	wg.Wait()
 	time.Sleep(time.Second)
 
+	select {
+	case err := <-errChan:
+		if err != nil {
+			t.Fatal("Expected no error, but got:", err)
+		}
+	default:
+	}
 	err = mux.Close()
-	assert.Equal(t, nil, err)
+	if err != nil {
+		t.Fatal("Expected no error, but got:", err)
+	}
 }

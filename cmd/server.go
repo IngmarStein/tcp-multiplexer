@@ -22,13 +22,14 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"github.com/ingmarstein/tcp-multiplexer/pkg/message"
-	"github.com/ingmarstein/tcp-multiplexer/pkg/multiplexer"
-	"github.com/sirupsen/logrus"
+	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/ingmarstein/tcp-multiplexer/pkg/message"
+	"github.com/ingmarstein/tcp-multiplexer/pkg/multiplexer"
 	"github.com/spf13/cobra"
 )
 
@@ -41,21 +42,17 @@ var serverCmd = &cobra.Command{
 	Use:   "server",
 	Short: "start multiplexer proxy server",
 	Run: func(cmd *cobra.Command, args []string) {
-		logrus.SetFormatter(&logrus.TextFormatter{
-			FullTimestamp: true,
-		})
-		logrus.SetLevel(logrus.WarnLevel)
+		slog.SetLogLoggerLevel(slog.LevelWarn)
 		if verbose {
-			logrus.SetLevel(logrus.InfoLevel)
+			slog.SetLogLoggerLevel(slog.LevelInfo)
 		}
 		if debug {
-			logrus.SetReportCaller(true)
-			logrus.SetLevel(logrus.DebugLevel)
+			slog.SetLogLoggerLevel(slog.LevelDebug)
 		}
 
 		msgReader, ok := message.Readers[applicationProtocol]
 		if !ok {
-			logrus.Errorf("%s application protocol is not supported", applicationProtocol)
+			slog.Error(fmt.Sprintf("%s application protocol is not supported", applicationProtocol))
 			os.Exit(2)
 		}
 
@@ -63,7 +60,7 @@ var serverCmd = &cobra.Command{
 		go func() {
 			err := mux.Start()
 			if err != nil {
-				logrus.Error(err)
+				slog.Error(err.Error())
 				os.Exit(2)
 			}
 		}()
@@ -79,7 +76,7 @@ var serverCmd = &cobra.Command{
 
 		err := mux.Close()
 		if err != nil {
-			logrus.Error(err)
+			slog.Error(err.Error())
 		}
 	},
 }

@@ -4,12 +4,14 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/sirupsen/logrus"
+	"fmt"
 	"io"
+	"log/slog"
 	"net/textproto"
 	"strconv"
 	"strings"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 // https://tools.ietf.org/html/rfc2616
@@ -41,13 +43,13 @@ func (H HTTPMessageReader) ReadMessage(conn io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	logrus.Debug(startLine)
+	slog.Debug(startLine)
 
 	headers, err := tp.ReadMIMEHeader()
 	if err != nil {
 		return nil, err
 	}
-	logrus.Debug(headers)
+	slog.Debug(fmt.Sprintf("%v", headers))
 
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages#body
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Messages#body_2
@@ -57,7 +59,7 @@ func (H HTTPMessageReader) ReadMessage(conn io.Reader) ([]byte, error) {
 	// first check form type
 	isFormContentType := false
 	if vv, ok := headers[headerKeyContentType]; ok {
-		logrus.Debug(vv[0])
+		slog.Debug(vv[0])
 		parts := strings.Split(vv[0], ";")
 		contentType := strings.TrimSpace(parts[0])
 		// 3. Multiple-resource bodies
@@ -108,9 +110,7 @@ func (H HTTPMessageReader) ReadMessage(conn io.Reader) ([]byte, error) {
 
 	msg := dumpHTTPMessage(startLine, headers, body)
 
-	if logrus.GetLevel() == logrus.DebugLevel {
-		spew.Dump(msg)
-	}
+	slog.Debug(spew.Sdump(msg))
 
 	return msg, err
 }

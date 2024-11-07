@@ -5,10 +5,11 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
-	"github.com/ingmarstein/tcp-multiplexer/pkg/message"
 	"net"
 	"os"
+
+	"github.com/davecgh/go-spew/spew"
+	"github.com/ingmarstein/tcp-multiplexer/pkg/message"
 )
 
 func main() {

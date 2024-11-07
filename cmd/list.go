@@ -17,6 +17,7 @@ package cmd
 
 import (
 	"fmt"
+
 	"github.com/ingmarstein/tcp-multiplexer/pkg/message"
 	"github.com/spf13/cobra"
 )

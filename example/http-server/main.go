@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"html"
 	"net/http"
 	"net/http/httputil"
 	"os"
+
+	"github.com/davecgh/go-spew/spew"
 )
 
 func getPort() string {

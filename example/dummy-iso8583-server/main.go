@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/ingmarstein/tcp-multiplexer/pkg/message"
 	"io"
 	"net"
 	"os"
+
+	"github.com/ingmarstein/tcp-multiplexer/pkg/message"
 )
 
 func handleConnection(conn net.Conn) {
