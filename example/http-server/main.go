@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 func getPort() string {
@@ -23,7 +21,7 @@ func headers(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	spew.Dump(dump)
+	fmt.Println(dump)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write([]byte(html.EscapeString(string(dump))))

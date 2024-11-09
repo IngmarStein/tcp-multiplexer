@@ -10,8 +10,6 @@ import (
 	"net/textproto"
 	"strconv"
 	"strings"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 // https://tools.ietf.org/html/rfc2616
@@ -110,7 +108,7 @@ func (H HTTPMessageReader) ReadMessage(conn io.Reader) ([]byte, error) {
 
 	msg := dumpHTTPMessage(startLine, headers, body)
 
-	slog.Debug(spew.Sdump(msg))
+	slog.Debug(string(msg))
 
 	return msg, err
 }

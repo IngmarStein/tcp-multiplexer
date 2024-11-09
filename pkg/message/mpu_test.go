@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"testing"
-
-	"github.com/davecgh/go-spew/spew"
 )
 
 func TestMPUMessageReader_ReadMessage(t *testing.T) {
@@ -17,11 +15,11 @@ func TestMPUMessageReader_ReadMessage(t *testing.T) {
 		buf.WriteByte('a')
 	}
 	buf.WriteString("another message")
-	spew.Dump(buf.Bytes())
+	fmt.Printf("%x\n", buf)
 
 	iso, err := MPUMessageReader{}.ReadMessage(bytes.NewReader(buf.Bytes()))
 	if err != nil {
 		t.Fatal("Expected no error, but got:", err)
 	}
-	spew.Dump(iso)
+	fmt.Printf("%x\n", iso)
 }

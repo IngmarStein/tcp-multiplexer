@@ -8,7 +8,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/ingmarstein/tcp-multiplexer/pkg/message"
 )
 
@@ -127,7 +126,7 @@ func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContai
 			break
 		}
 
-		slog.Debug(fmt.Sprintf("Message from client...\n%s", spew.Sdump(msg)))
+		slog.Debug(fmt.Sprintf("Message from client...\n%x\n", msg))
 
 		// enqueue request msg to target conn loop
 		sender <- &reqContainer{
@@ -234,7 +233,7 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 			err:     err,
 		}
 
-		slog.Debug(fmt.Sprintf("Message from target server...\n%s", spew.Sdump(msg)))
+		slog.Debug(fmt.Sprintf("Message from target server...\n%x\n", msg))
 
 		if err != nil {
 			slog.Error(fmt.Sprintf("target connection: %v", err))

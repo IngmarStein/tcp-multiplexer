@@ -8,7 +8,6 @@ import (
 	"net"
 	"os"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/ingmarstein/tcp-multiplexer/pkg/message"
 )
 
@@ -38,7 +37,7 @@ func main() {
 		msg, err := message.ISO8583MessageReader{}.ReadMessage(conn)
 		handleErr(err)
 
-		spew.Dump(msg)
+		fmt.Printf("%x\n", msg)
 	}
 }
 
