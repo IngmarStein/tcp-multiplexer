@@ -29,6 +29,7 @@ type (
 		targetServer  string
 		port          string
 		messageReader message.Reader
+		timeout       time.Duration
 		l             net.Listener
 		quit          chan struct{}
 		wg            *sync.WaitGroup
@@ -42,17 +43,18 @@ const (
 	Packet
 )
 
-func deadline() time.Time {
-	return time.Now().Add(60 * time.Second)
-}
-
-func New(targetServer, port string, messageReader message.Reader) Multiplexer {
+func New(targetServer, port string, messageReader message.Reader, timeout time.Duration) Multiplexer {
 	return Multiplexer{
 		targetServer:  targetServer,
 		port:          port,
 		messageReader: messageReader,
 		quit:          make(chan struct{}),
+		timeout:       timeout,
 	}
+}
+
+func (mux *Multiplexer) deadline() time.Time {
+	return time.Now().Add(mux.timeout)
 }
 
 func (mux *Multiplexer) Start() error {
@@ -112,7 +114,7 @@ func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContai
 	callback := make(chan *respContainer)
 
 	for {
-		err := conn.SetReadDeadline(deadline())
+		err := conn.SetReadDeadline(mux.deadline())
 		if err != nil {
 			slog.Error(fmt.Sprintf("error setting read deadline: %v", err))
 		}
@@ -143,7 +145,7 @@ func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContai
 		}
 
 		// write back
-		err = conn.SetWriteDeadline(deadline())
+		err = conn.SetWriteDeadline(mux.deadline())
 		if err != nil {
 			slog.Error(fmt.Sprintf("error setting write deadline: %v", err))
 		}
@@ -201,7 +203,7 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 			conn = mux.createTargetConn()
 		}
 
-		err := conn.SetWriteDeadline(deadline())
+		err := conn.SetWriteDeadline(mux.deadline())
 		if err != nil {
 			slog.Error(fmt.Sprintf("error setting write deadline: %v", err))
 		}
@@ -222,7 +224,7 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 			continue
 		}
 
-		err = conn.SetReadDeadline(deadline())
+		err = conn.SetReadDeadline(mux.deadline())
 		if err != nil {
 			slog.Error(fmt.Sprintf("error setting read deadline: %v", err))
 		}

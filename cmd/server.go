@@ -27,15 +27,19 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/ingmarstein/tcp-multiplexer/pkg/message"
 	"github.com/ingmarstein/tcp-multiplexer/pkg/multiplexer"
 	"github.com/spf13/cobra"
 )
 
-var port string
-var targetServer string
-var applicationProtocol string
+var (
+	port                string
+	targetServer        string
+	applicationProtocol string
+	timeout             int
+)
 
 // serverCmd represents the server command
 var serverCmd = &cobra.Command{
@@ -56,7 +60,7 @@ var serverCmd = &cobra.Command{
 			os.Exit(2)
 		}
 
-		mux := multiplexer.New(targetServer, port, msgReader)
+		mux := multiplexer.New(targetServer, port, msgReader, time.Duration(timeout)*time.Second)
 		go func() {
 			err := mux.Start()
 			if err != nil {
@@ -87,4 +91,5 @@ func init() {
 	serverCmd.Flags().StringVarP(&port, "listen", "l", "8000", "multiplexer will listen on")
 	serverCmd.Flags().StringVarP(&targetServer, "targetServer", "t", "127.0.0.1:1234", "multiplexer will forward message to")
 	serverCmd.Flags().StringVarP(&applicationProtocol, "applicationProtocol", "p", "echo", "multiplexer will parse to message echo/http/iso8583/modbus")
+	serverCmd.Flags().IntVar(&timeout, "timeout", 60, "timeout in seconds")
 }
