@@ -30,6 +30,7 @@ type (
 		port          string
 		messageReader message.Reader
 		timeout       time.Duration
+		delay         time.Duration
 		l             net.Listener
 		quit          chan struct{}
 		wg            *sync.WaitGroup
@@ -43,12 +44,13 @@ const (
 	Packet
 )
 
-func New(targetServer, port string, messageReader message.Reader, timeout time.Duration) Multiplexer {
+func New(targetServer, port string, messageReader message.Reader, delay time.Duration, timeout time.Duration) Multiplexer {
 	return Multiplexer{
 		targetServer:  targetServer,
 		port:          port,
 		messageReader: messageReader,
 		quit:          make(chan struct{}),
+		delay:         delay,
 		timeout:       timeout,
 	}
 }
@@ -169,6 +171,12 @@ func (mux *Multiplexer) createTargetConn() net.Conn {
 		}
 
 		slog.Info(fmt.Sprintf("new target connection: %v <-> %v", conn.LocalAddr(), conn.RemoteAddr()))
+
+		if mux.delay > 0 {
+			slog.Info(fmt.Sprintf("waiting %s, before using new target connection", mux.delay))
+			time.Sleep(mux.delay)
+		}
+
 		return conn
 	}
 }

@@ -89,7 +89,7 @@ func TestMultiplexer_Start(t *testing.T) {
 	}()
 	const muxServer = "127.0.0.1:1235"
 
-	mux := New(l.Addr().String(), "1235", message.EchoMessageReader{})
+	mux := New(l.Addr().String(), "1235", message.EchoMessageReader{}, 0, 5*time.Second)
 
 	errChan := make(chan error, 1)
 	go func() {

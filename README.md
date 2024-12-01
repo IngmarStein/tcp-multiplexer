@@ -79,9 +79,11 @@ Usage:
 
 Flags:
   -p, --applicationProtocol string   multiplexer will parse to message echo/http/iso8583 (default "echo")
+      --delay duration               delay after connect
   -h, --help                         help for server
   -l, --listen string                multiplexer will listen on (default "8000")
   -t, --targetServer string          multiplexer will forward message to (default "127.0.0.1:1234")
+      --timeout int                  timeout in seconds (default 60)
 
 Global Flags:
   -v, --verbose   verbose log
