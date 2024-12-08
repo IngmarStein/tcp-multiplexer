@@ -1,6 +1,6 @@
 module github.com/ingmarstein/tcp-multiplexer
 
-go 1.23.3
+go 1.23.4
 
 require github.com/spf13/cobra v1.8.1
 
