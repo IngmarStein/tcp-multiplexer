@@ -55,6 +55,12 @@ var serverCmd = &cobra.Command{
 			slog.SetLogLoggerLevel(slog.LevelDebug)
 		}
 
+		slog.Info(fmt.Sprintf("starting multiplexer version %q on port %s, forwarding to %s, application protocol is %q",
+			version,
+			port,
+			targetServer,
+			applicationProtocol))
+
 		msgReader, ok := message.Readers[applicationProtocol]
 		if !ok {
 			slog.Error(fmt.Sprintf("%s application protocol is not supported", applicationProtocol))
