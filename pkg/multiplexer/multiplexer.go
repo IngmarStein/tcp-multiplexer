@@ -159,26 +159,23 @@ func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContai
 	}
 }
 
-func (mux *Multiplexer) createTargetConn() net.Conn {
-	for {
-		slog.Info("creating target connection")
-		conn, err := net.DialTimeout("tcp", mux.targetServer, 30*time.Second)
-		if err != nil {
-			slog.Error(fmt.Sprintf("failed to connect to target server %s, %v", mux.targetServer, err))
-			// TODO: make sleep time configurable
-			time.Sleep(1 * time.Second)
-			continue
-		}
-
-		slog.Info(fmt.Sprintf("new target connection: %v <-> %v", conn.LocalAddr(), conn.RemoteAddr()))
-
-		if mux.delay > 0 {
-			slog.Info(fmt.Sprintf("waiting %s, before using new target connection", mux.delay))
-			time.Sleep(mux.delay)
-		}
-
-		return conn
+func (mux *Multiplexer) createTargetConn() (net.Conn, error) {
+	slog.Info("creating target connection")
+	conn, err := net.DialTimeout("tcp", mux.targetServer, 30*time.Second)
+	if err != nil {
+		slog.Error(fmt.Sprintf("failed to connect to target server %s, %v", mux.targetServer, err))
+		time.Sleep(1 * time.Second)
+		return nil, err
 	}
+
+	slog.Info(fmt.Sprintf("new target connection: %v <-> %v", conn.LocalAddr(), conn.RemoteAddr()))
+
+	if mux.delay > 0 {
+		slog.Info(fmt.Sprintf("waiting %s, before using new target connection", mux.delay))
+		time.Sleep(mux.delay)
+	}
+
+	return conn, nil
 }
 
 func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
@@ -208,7 +205,14 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 		}
 
 		if conn == nil {
-			conn = mux.createTargetConn()
+			var err error
+			conn, err = mux.createTargetConn()
+			if err != nil {
+				container.sender <- &respContainer{
+					err: err,
+				}
+				continue
+			}
 		}
 
 		err := conn.SetWriteDeadline(mux.deadline())
