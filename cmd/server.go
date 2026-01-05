@@ -22,7 +22,6 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -40,6 +39,7 @@ var (
 	applicationProtocol string
 	timeout             int
 	delay               time.Duration
+	retryDelay          time.Duration
 )
 
 // serverCmd represents the server command
@@ -55,19 +55,19 @@ var serverCmd = &cobra.Command{
 			slog.SetLogLoggerLevel(slog.LevelDebug)
 		}
 
-		slog.Info(fmt.Sprintf("starting multiplexer version %q on port %s, forwarding to %s, application protocol is %q",
-			version,
-			port,
-			targetServer,
-			applicationProtocol))
+		slog.Info("starting multiplexer",
+			"version", version,
+			"port", port,
+			"targetServer", targetServer,
+			"applicationProtocol", applicationProtocol)
 
 		msgReader, ok := message.Readers[applicationProtocol]
 		if !ok {
-			slog.Error(fmt.Sprintf("%s application protocol is not supported", applicationProtocol))
+			slog.Error("application protocol is not supported", "protocol", applicationProtocol)
 			os.Exit(2)
 		}
 
-		mux := multiplexer.New(targetServer, port, msgReader, delay, time.Duration(timeout)*time.Second)
+		mux := multiplexer.New(targetServer, port, msgReader, delay, time.Duration(timeout)*time.Second, retryDelay)
 		go func() {
 			err := mux.Start()
 			if err != nil {
@@ -100,4 +100,5 @@ func init() {
 	serverCmd.Flags().StringVarP(&applicationProtocol, "applicationProtocol", "p", "echo", "multiplexer will parse to message echo/http/iso8583/modbus")
 	serverCmd.Flags().IntVar(&timeout, "timeout", 60, "timeout in seconds")
 	serverCmd.Flags().DurationVar(&delay, "delay", 0, "delay after connect")
+	serverCmd.Flags().DurationVar(&retryDelay, "retry-delay", 1*time.Second, "delay before retrying target connection")
 }
