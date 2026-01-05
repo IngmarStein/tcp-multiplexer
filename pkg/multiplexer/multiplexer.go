@@ -163,7 +163,7 @@ func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContai
 
 func (mux *Multiplexer) createTargetConn() (net.Conn, error) {
 	slog.Info("creating target connection")
-	conn, err := net.DialTimeout("tcp", mux.targetServer, 30*time.Second)
+	conn, err := net.DialTimeout("tcp", mux.targetServer, mux.timeout)
 	if err != nil {
 		slog.Error("failed to connect to target server", "server", mux.targetServer, "error", err)
 		if mux.retryDelay > 0 {
