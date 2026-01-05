@@ -80,7 +80,7 @@ Usage:
 Flags:
   -p, --applicationProtocol string   multiplexer will parse to message echo/http/iso8583 (default "echo")
       --delay duration               delay after connect
-      --retry-delay duration         delay before retrying target connection
+      --retryDelay duration          delay before retrying target connection (default "1s")
   -h, --help                         help for server
   -l, --listen string                multiplexer will listen on (default "8000")
   -t, --targetServer string          multiplexer will forward message to (default "127.0.0.1:1234")

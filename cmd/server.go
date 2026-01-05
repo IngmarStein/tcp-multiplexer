@@ -100,5 +100,5 @@ func init() {
 	serverCmd.Flags().StringVarP(&applicationProtocol, "applicationProtocol", "p", "echo", "multiplexer will parse to message echo/http/iso8583/modbus")
 	serverCmd.Flags().IntVar(&timeout, "timeout", 60, "timeout in seconds")
 	serverCmd.Flags().DurationVar(&delay, "delay", 0, "delay after connect")
-	serverCmd.Flags().DurationVar(&retryDelay, "retry-delay", 1*time.Second, "delay before retrying target connection")
+	serverCmd.Flags().DurationVar(&retryDelay, "retryDelay", 1*time.Second, "delay before retrying target connection")
 }
