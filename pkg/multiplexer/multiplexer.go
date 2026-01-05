@@ -31,6 +31,7 @@ type (
 		messageReader message.Reader
 		timeout       time.Duration
 		delay         time.Duration
+		retryDelay    time.Duration
 		l             net.Listener
 		quit          chan struct{}
 		wg            *sync.WaitGroup
@@ -44,7 +45,7 @@ const (
 	Packet
 )
 
-func New(targetServer, port string, messageReader message.Reader, delay time.Duration, timeout time.Duration) Multiplexer {
+func New(targetServer, port string, messageReader message.Reader, delay time.Duration, timeout time.Duration, retryDelay time.Duration) Multiplexer {
 	return Multiplexer{
 		targetServer:  targetServer,
 		port:          port,
@@ -52,6 +53,7 @@ func New(targetServer, port string, messageReader message.Reader, delay time.Dur
 		quit:          make(chan struct{}),
 		delay:         delay,
 		timeout:       timeout,
+		retryDelay:    retryDelay,
 	}
 }
 
@@ -87,12 +89,12 @@ L:
 				slog.Info("no more connections will be accepted")
 				return nil
 			default:
-				slog.Error(err.Error())
+				slog.Error("accept error", "error", err)
 				goto L
 			}
 		}
 		count++
-		slog.Info(fmt.Sprintf("#%d: %v <-> %v", count, conn.RemoteAddr(), conn.LocalAddr()))
+		slog.Info("new connection", "id", count, "remote", conn.RemoteAddr(), "local", conn.LocalAddr())
 
 		wg.Add(1)
 		go func() {
@@ -104,11 +106,11 @@ L:
 
 func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContainer) {
 	defer func(c net.Conn) {
-		slog.Debug(fmt.Sprintf("Closing client connection: %v", c.RemoteAddr()))
+		slog.Debug("closing client connection", "remote", c.RemoteAddr())
 		err := c.Close()
 		sender <- &reqContainer{typ: Disconnection}
 		if err != nil {
-			slog.Error(err.Error())
+			slog.Error("error closing client connection", "error", err)
 		}
 	}(conn)
 
@@ -118,19 +120,19 @@ func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContai
 	for {
 		err := conn.SetReadDeadline(mux.deadline())
 		if err != nil {
-			slog.Error(fmt.Sprintf("error setting read deadline: %v", err))
+			slog.Error("error setting read deadline", "error", err)
 		}
 		msg, err := mux.messageReader.ReadMessage(conn)
 		if err == io.EOF {
-			slog.Info(fmt.Sprintf("closed: %v <-> %v", conn.RemoteAddr(), conn.LocalAddr()))
+			slog.Info("closed connection", "remote", conn.RemoteAddr(), "local", conn.LocalAddr())
 			break
 		}
 		if err != nil {
-			slog.Error(err.Error())
+			slog.Error("error reading from client", "error", err)
 			break
 		}
 
-		slog.Debug(fmt.Sprintf("Message from client...\n%x\n", msg))
+		slog.Debug("message from client", "hex", fmt.Sprintf("%x", msg))
 
 		// enqueue request msg to target conn loop
 		sender <- &reqContainer{
@@ -142,43 +144,42 @@ func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContai
 		// get response from target conn loop
 		resp := <-callback
 		if resp.err != nil {
-			slog.Error(fmt.Sprintf("failed to forward message, %v", resp.err))
+			slog.Error("failed to forward message", "error", resp.err)
 			break
 		}
 
 		// write back
 		err = conn.SetWriteDeadline(mux.deadline())
 		if err != nil {
-			slog.Error(fmt.Sprintf("error setting write deadline: %v", err))
+			slog.Error("error setting write deadline", "error", err)
 		}
 		_, err = conn.Write(resp.message)
 		if err != nil {
-			slog.Error(err.Error())
+			slog.Error("error writing to client", "error", err)
 			break
 		}
 	}
 }
 
-func (mux *Multiplexer) createTargetConn() net.Conn {
-	for {
-		slog.Info("creating target connection")
-		conn, err := net.DialTimeout("tcp", mux.targetServer, 30*time.Second)
-		if err != nil {
-			slog.Error(fmt.Sprintf("failed to connect to target server %s, %v", mux.targetServer, err))
-			// TODO: make sleep time configurable
-			time.Sleep(1 * time.Second)
-			continue
+func (mux *Multiplexer) createTargetConn() (net.Conn, error) {
+	slog.Info("creating target connection")
+	conn, err := net.DialTimeout("tcp", mux.targetServer, mux.timeout)
+	if err != nil {
+		slog.Error("failed to connect to target server", "server", mux.targetServer, "error", err)
+		if mux.retryDelay > 0 {
+			time.Sleep(mux.retryDelay)
 		}
-
-		slog.Info(fmt.Sprintf("new target connection: %v <-> %v", conn.LocalAddr(), conn.RemoteAddr()))
-
-		if mux.delay > 0 {
-			slog.Info(fmt.Sprintf("waiting %s, before using new target connection", mux.delay))
-			time.Sleep(mux.delay)
-		}
-
-		return conn
+		return nil, err
 	}
+
+	slog.Info("new target connection", "local", conn.LocalAddr(), "remote", conn.RemoteAddr())
+
+	if mux.delay > 0 {
+		slog.Info("waiting before using new target connection", "delay", mux.delay)
+		time.Sleep(mux.delay)
+	}
+
+	return conn, nil
 }
 
 func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
@@ -189,16 +190,16 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 		switch container.typ {
 		case Connection:
 			clients++
-			slog.Info(fmt.Sprintf("Connected clients: %d", clients))
+			slog.Info("connected clients", "count", clients)
 			continue
 		case Disconnection:
 			clients--
-			slog.Info(fmt.Sprintf("Connected clients: %d", clients))
+			slog.Info("connected clients", "count", clients)
 			if clients == 0 && conn != nil {
 				slog.Info("closing target connection")
 				err := conn.Close()
 				if err != nil {
-					slog.Error(err.Error())
+					slog.Error("error closing target connection", "error", err)
 				}
 				conn = nil
 			}
@@ -208,12 +209,19 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 		}
 
 		if conn == nil {
-			conn = mux.createTargetConn()
+			c, err := mux.createTargetConn()
+			if err != nil {
+				container.sender <- &respContainer{
+					err: err,
+				}
+				continue
+			}
+			conn = c
 		}
 
 		err := conn.SetWriteDeadline(mux.deadline())
 		if err != nil {
-			slog.Error(fmt.Sprintf("error setting write deadline: %v", err))
+			slog.Error("error setting write deadline", "error", err)
 		}
 
 		_, err = conn.Write(container.message)
@@ -222,11 +230,11 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 				err: err,
 			}
 
-			slog.Error(fmt.Sprintf("target connection: %v", err))
+			slog.Error("target connection error during write", "error", err)
 			// renew conn
 			err = conn.Close()
 			if err != nil {
-				slog.Error(fmt.Sprintf("error while closing connection: %v", err))
+				slog.Error("error while closing connection", "error", err)
 			}
 			conn = nil
 			continue
@@ -234,7 +242,7 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 
 		err = conn.SetReadDeadline(mux.deadline())
 		if err != nil {
-			slog.Error(fmt.Sprintf("error setting read deadline: %v", err))
+			slog.Error("error setting read deadline", "error", err)
 		}
 
 		msg, err := mux.messageReader.ReadMessage(conn)
@@ -243,14 +251,14 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 			err:     err,
 		}
 
-		slog.Debug(fmt.Sprintf("Message from target server...\n%x\n", msg))
+		slog.Debug("message from target server", "hex", fmt.Sprintf("%x", msg))
 
 		if err != nil {
-			slog.Error(fmt.Sprintf("target connection: %v", err))
+			slog.Error("target connection error during read", "error", err)
 			// renew conn
 			err = conn.Close()
 			if err != nil {
-				slog.Error(fmt.Sprintf("error while closing connection: %v", err))
+				slog.Error("error while closing connection", "error", err)
 			}
 			conn = nil
 			continue
@@ -263,7 +271,7 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 // Close graceful shutdown
 func (mux *Multiplexer) Close() error {
 	close(mux.quit)
-	slog.Info("closing server...")
+	slog.Info("closing server")
 	err := mux.l.Close()
 	if err != nil {
 		return err
