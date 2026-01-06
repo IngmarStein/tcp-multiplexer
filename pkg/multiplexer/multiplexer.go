@@ -182,13 +182,26 @@ func (mux *Multiplexer) createTargetConn() (net.Conn, error) {
 func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 	var conn net.Conn
 	clients := 0
-	var nextRetry time.Time
+	nextRetry := time.Now()
 	var lastErr error
 
+	replyTimer := time.NewTimer(time.Second)
+	if !replyTimer.Stop() {
+		<-replyTimer.C
+	}
+	defer replyTimer.Stop()
+
 	reply := func(c *reqContainer, r *respContainer) {
+		replyTimer.Reset(time.Second)
 		select {
 		case c.sender <- r:
-		case <-time.After(time.Second):
+			if !replyTimer.Stop() {
+				select {
+				case <-replyTimer.C:
+				default:
+				}
+			}
+		case <-replyTimer.C:
 			slog.Warn("failed to send response to client", "error", "timeout")
 		}
 	}
