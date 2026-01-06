@@ -185,6 +185,14 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 	var nextRetry time.Time
 	var lastErr error
 
+	reply := func(c *reqContainer, r *respContainer) {
+		select {
+		case c.sender <- r:
+		case <-time.After(time.Second):
+			slog.Warn("failed to send response to client", "error", "timeout")
+		}
+	}
+
 	for container := range requestQueue {
 		switch container.typ {
 		case Connection:
@@ -209,21 +217,21 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 
 		if conn == nil {
 			if time.Now().Before(nextRetry) {
-				container.sender <- &respContainer{
+				reply(container, &respContainer{
 					err: lastErr,
-				}
+				})
 				continue
 			}
 
 			c, err := mux.createTargetConn()
 			if err != nil {
-				lastErr = err
+				lastErr = fmt.Errorf("failed to connect to target, entering backoff: %w", err)
 				if mux.retryDelay > 0 {
 					nextRetry = time.Now().Add(mux.retryDelay)
 				}
-				container.sender <- &respContainer{
-					err: err,
-				}
+				reply(container, &respContainer{
+					err: lastErr,
+				})
 				continue
 			}
 			conn = c
@@ -236,9 +244,9 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 
 		_, err = conn.Write(container.message)
 		if err != nil {
-			container.sender <- &respContainer{
+			reply(container, &respContainer{
 				err: err,
-			}
+			})
 
 			slog.Error("target connection error during write", "error", err)
 			// renew conn
@@ -256,10 +264,10 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 		}
 
 		msg, err := mux.messageReader.ReadMessage(conn)
-		container.sender <- &respContainer{
+		reply(container, &respContainer{
 			message: msg,
 			err:     err,
-		}
+		})
 
 		slog.Debug("message from target server", "hex", fmt.Sprintf("%x", msg))
 
