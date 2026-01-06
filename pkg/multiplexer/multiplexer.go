@@ -166,9 +166,6 @@ func (mux *Multiplexer) createTargetConn() (net.Conn, error) {
 	conn, err := net.DialTimeout("tcp", mux.targetServer, mux.timeout)
 	if err != nil {
 		slog.Error("failed to connect to target server", "server", mux.targetServer, "error", err)
-		if mux.retryDelay > 0 {
-			time.Sleep(mux.retryDelay)
-		}
 		return nil, err
 	}
 
@@ -185,6 +182,8 @@ func (mux *Multiplexer) createTargetConn() (net.Conn, error) {
 func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 	var conn net.Conn
 	clients := 0
+	var nextRetry time.Time
+	var lastErr error
 
 	for container := range requestQueue {
 		switch container.typ {
@@ -209,8 +208,19 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 		}
 
 		if conn == nil {
+			if time.Now().Before(nextRetry) {
+				container.sender <- &respContainer{
+					err: lastErr,
+				}
+				continue
+			}
+
 			c, err := mux.createTargetConn()
 			if err != nil {
+				lastErr = err
+				if mux.retryDelay > 0 {
+					nextRetry = time.Now().Add(mux.retryDelay)
+				}
 				container.sender <- &respContainer{
 					err: err,
 				}
