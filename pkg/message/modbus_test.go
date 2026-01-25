@@ -25,7 +25,7 @@ func TestModbusMessageReader_ReadMessage(t *testing.T) {
 			reader: &ModbusMessageReader{},
 			// Protocol ID 1 instead of 0
 			payload: []byte{0x00, 0x01, 0x00, 0x01, 0x00, 0x02, 0x01, 0x02},
-			wantErr: true,
+			wantErr: false,
 		},
 		{
 			name:   "Modbus RTU over TCP Valid CRC",

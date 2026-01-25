@@ -64,11 +64,6 @@ func readModbusMessage(conn io.Reader, maxFrameLength int, verifyCRC bool) ([]by
 		return nil, err
 	}
 
-	// The Protocol field is zero to indicate Modbus protocol.
-	if binary.BigEndian.Uint16(header[2:4]) != 0 {
-		return nil, fmt.Errorf("protocol error: non-zero protocol id")
-	}
-
 	// determine how many more bytes we need to read
 	bytesNeeded := int(binary.BigEndian.Uint16(header[4:6]))
 	// never read more than the max allowed frame length
