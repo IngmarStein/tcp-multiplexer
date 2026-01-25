@@ -140,7 +140,7 @@ func readModbusSerialMessage(conn io.Reader) ([]byte, error) {
 			return nil, err
 		}
 
-		current := append(head, b3...)
+		fullMsg = append(head, b3...)
 		byteCount := int(b3[0])
 		responseLen := 5 + byteCount
 		requestLen := 8
@@ -155,45 +155,30 @@ func readModbusSerialMessage(conn io.Reader) ([]byte, error) {
 			if _, err := io.ReadFull(conn, buf); err != nil {
 				return nil, err
 			}
-			current = append(current, buf...)
+			fullMsg = append(fullMsg, buf...)
 		}
 
-		// If we reached responseLen, check Response CRC
-		if responseLen <= requestLen {
-			if checkCRC(current) {
-				return current, nil
-			}
-		}
-
-		// If we reached requestLen, check Request CRC
-		if requestLen <= responseLen {
-			// If we read more than requestLen (unlikely logic-wise above, but safe check)
-			if len(current) >= requestLen {
-				if checkCRC(current[:requestLen]) {
-					// Check if we accidentally over-read?
-					// If responseLen > requestLen, we read requestLen.
-					// So current IS requestLen.
-					return current[:requestLen], nil
-				}
-			}
+		// At this point, len(fullMsg) == min(responseLen, requestLen).
+		// If the CRC is valid for this shorter frame, we're done.
+		if checkCRC(fullMsg) {
+			return fullMsg, nil
 		}
 
 		// If we haven't satisfied the longer frame, read the rest
-		var finalTarget int
-		finalTarget = max(responseLen, requestLen)
+		finalTarget := max(responseLen, requestLen)
 
-		needed = finalTarget - len(current)
+		needed = finalTarget - len(fullMsg)
 		if needed > 0 {
 			buf := make([]byte, needed)
 			if _, err := io.ReadFull(conn, buf); err != nil {
 				return nil, err
 			}
-			current = append(current, buf...)
+			fullMsg = append(fullMsg, buf...)
 		}
 
 		// Check CRC again for the longer frame
-		if checkCRC(current) {
-			return current, nil
+		if checkCRC(fullMsg) {
+			return fullMsg, nil
 		}
 
 		return nil, fmt.Errorf("protocol error: CRC mismatch for ambiguous frame")
