@@ -19,6 +19,7 @@ func init() {
 		&MPUMessageReader{},
 		&ModbusMessageReader{},
 		&ModbusRTUMessageReader{},
+		&ModbusSerialMessageReader{},
 	} {
 		Readers[msgReader.Name()] = msgReader
 	}
