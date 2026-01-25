@@ -19,6 +19,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+
+// Package cmd represents the base command
 package cmd
 
 import (
@@ -31,7 +33,7 @@ import (
 var verbose bool
 var debug bool
 
-// rootCmd represents the base command when called without any subcommands
+// rootCmd represents the base command when called without any subcommands.
 var rootCmd = &cobra.Command{
 	Use:   "tcp-multiplexer",
 	Short: "Multiplex multiple connections into a single TCP connection.",

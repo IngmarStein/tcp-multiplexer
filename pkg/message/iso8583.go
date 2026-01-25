@@ -15,7 +15,7 @@ func (I ISO8583MessageReader) Name() string {
 
 // ReadMessage assume including a header with the length of the 8583 message
 // http://j8583.sourceforge.net/desc8583en.html
-// otherwise, we have to parse iso8583 message
+// otherwise, we have to parse iso8583 message.
 func (I ISO8583MessageReader) ReadMessage(conn io.Reader) ([]byte, error) {
 	header := make([]byte, 2)
 	_, err := conn.Read(header)

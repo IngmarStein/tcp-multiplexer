@@ -29,17 +29,17 @@ func handleErr(err error) {
 func client(t *testing.T, server string, clientIndex int) {
 	conn, err := net.Dial("tcp", server)
 	handleErr(err)
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 
-	for i := 0; i < 10; i++ {
-		echo := []byte(fmt.Sprintf("client %d counter %d\n", clientIndex, i))
+	for i := range 10 {
+		echo := fmt.Appendf(nil, "client %d counter %d\n", clientIndex, i)
 		_, err = conn.Write(echo)
 		handleErr(err)
 
 		echoReply, err := message.EchoMessageReader{}.ReadMessage(conn)
 		handleErr(err)
 
-		if bytes.Compare(echo, echoReply) != 0 {
+		if !bytes.Equal(echo, echoReply) {
 			t.Fatalf("Expected %s, but got %s", echo, echoReply)
 		}
 	}
@@ -76,8 +76,11 @@ func handleConnection(conn net.Conn) {
 
 func TestMultiplexer_Start(t *testing.T) {
 	l, err := net.Listen("tcp", ":0")
+	if err != nil {
+		t.Fatal(err)
+	}
 	go func() {
-		defer l.Close()
+		defer func() { _ = l.Close() }()
 		for {
 			conn, err := l.Accept()
 			if err != nil {

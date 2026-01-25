@@ -21,10 +21,10 @@ func headers(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(dump)
+	fmt.Println(string(dump))
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte(html.EscapeString(string(dump))))
+	_, _ = w.Write([]byte(html.EscapeString(string(dump))))
 }
 
 func main() {

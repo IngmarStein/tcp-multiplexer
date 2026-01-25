@@ -103,7 +103,7 @@ func (H HTTPMessageReader) ReadMessage(conn io.Reader) ([]byte, error) {
 		}
 	}
 
-	// TODO: 4. Transfer-Encoding
+	// Note: 4. Transfer-Encoding
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Transfer-Encoding
 
 	msg := dumpHTTPMessage(startLine, headers, body)

@@ -55,6 +55,7 @@ are supported currently:
 2. http1 (not including https, websocket): not fully supported
 3. iso8583: with 2 bytes header of the length of iso8583 message
 4. modbus-tcp
+5. modbus-rtu: Modbus RTU over TCP (includes CRC)
 
 ```
 $ ./tcp-multiplexer list                                    
@@ -62,6 +63,7 @@ $ ./tcp-multiplexer list
 * echo
 * http
 * modbus
+* modbus-rtu
 
 usage for example: ./tcp-multiplexer server -p echo
 ```
