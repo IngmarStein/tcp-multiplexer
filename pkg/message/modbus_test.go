@@ -55,8 +55,8 @@ func TestModbusMessageReader_ReadMessage(t *testing.T) {
 			name:   "Modbus TCP Max Length (260)",
 			reader: &ModbusMessageReader{},
 			payload: func() []byte {
-				buf := make([]byte, 260)
-				binary.BigEndian.PutUint16(buf[4:6], 254)
+				buf := make([]byte, modbusTCPMaxFrameLength)
+				binary.BigEndian.PutUint16(buf[4:6], modbusTCPMaxFrameLength-mbapHeaderLength)
 				return buf
 			}(),
 			wantErr: false,
@@ -66,15 +66,15 @@ func TestModbusMessageReader_ReadMessage(t *testing.T) {
 			reader: &ModbusRTUMessageReader{},
 			payload: func() []byte {
 				// Unit(1) + PDU(253) + CRC(2)
-				data := make([]byte, 254)
+				data := make([]byte, modbusRTUMaxFrameLength-mbapHeaderLength-2)
 				for i := range data {
 					data[i] = byte(i)
 				}
 				crc := crc16(data)
-				buf := make([]byte, 262)
-				binary.BigEndian.PutUint16(buf[4:6], 256)
+				buf := make([]byte, modbusRTUMaxFrameLength)
+				binary.BigEndian.PutUint16(buf[4:6], modbusRTUMaxFrameLength-mbapHeaderLength)
 				copy(buf[6:], data)
-				binary.LittleEndian.PutUint16(buf[260:], crc)
+				binary.LittleEndian.PutUint16(buf[modbusRTUMaxFrameLength-2:], crc)
 				return buf
 			}(),
 			wantErr: false,

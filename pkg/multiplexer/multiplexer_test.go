@@ -15,7 +15,6 @@ import (
 	"github.com/ingmarstein/tcp-multiplexer/pkg/message"
 )
 
-//nolint:gochecknoinits
 func init() {
 	slog.SetLogLoggerLevel(slog.LevelInfo)
 }

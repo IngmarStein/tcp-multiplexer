@@ -48,7 +48,6 @@ func Execute() {
 	}
 }
 
-//nolint:gochecknoinits
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose log")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "debug", "d", false, "debug log")

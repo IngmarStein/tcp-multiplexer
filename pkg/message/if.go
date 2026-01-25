@@ -10,7 +10,6 @@ type Reader interface {
 
 var Readers map[string]Reader
 
-//nolint:gochecknoinits
 func init() {
 	Readers = make(map[string]Reader)
 	for _, msgReader := range []Reader{

@@ -93,7 +93,6 @@ var serverCmd = &cobra.Command{
 	},
 }
 
-//nolint:gochecknoinits
 func init() {
 	rootCmd.AddCommand(serverCmd)
 

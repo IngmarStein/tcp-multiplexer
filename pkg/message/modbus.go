@@ -9,7 +9,8 @@ import (
 const (
 	mbapHeaderLength        = 6
 	modbusTCPMaxFrameLength = 260
-	modbusRTUMaxFrameLength = 262
+	// Modbus RTU over TCP adds a 2-byte CRC to the Modbus TCP frame.
+	modbusRTUMaxFrameLength = modbusTCPMaxFrameLength + 2
 )
 
 type ModbusMessageReader struct {
@@ -68,8 +69,8 @@ func readModbusMessage(conn io.Reader, maxFrameLength int, verifyCRC bool) ([]by
 	fullMsg := append(header, rxbuf...)
 
 	if verifyCRC {
-		if len(rxbuf) < 3 { // Must have at least Unit ID (1) and CRC (2)
-			return nil, fmt.Errorf("protocol error: frame too short for CRC")
+		if len(rxbuf) < 4 { // Must have at least Unit ID (1), Function Code (1), and CRC (2)
+			return nil, fmt.Errorf("protocol error: frame too short for CRC, got %d bytes, expected at least 4", len(rxbuf))
 		}
 		// CRC is calculated over Unit Address and Message (PDU)
 		// These are all bytes after the 6-byte MBAP header, excluding the last 2 bytes (the CRC itself)

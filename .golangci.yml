@@ -15,6 +15,7 @@ linters:
     - funcorder
     - funlen
     - gocognit
+    - gochecknoinits
     - gocyclo
     - lll
     - maintidx
