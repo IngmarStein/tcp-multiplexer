@@ -96,11 +96,9 @@ L:
 		count++
 		slog.Info("new connection", "id", count, "remote", conn.RemoteAddr(), "local", conn.LocalAddr())
 
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			mux.handleConnection(conn, requestQueue)
-			wg.Done()
-		}()
+		})
 	}
 }
 
