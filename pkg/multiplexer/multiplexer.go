@@ -225,7 +225,6 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 			}
 			continue
 		case Packet:
-			break
 		}
 
 		if conn == nil {
@@ -299,7 +298,7 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 	slog.Info("target connection write/read loop stopped gracefully")
 }
 
-// Close graceful shutdown
+// Close graceful shutdown.
 func (mux *Multiplexer) Close() error {
 	close(mux.quit)
 	slog.Info("closing server")

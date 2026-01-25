@@ -83,12 +83,12 @@ func readModbusMessage(conn io.Reader, maxFrameLength int, verifyCRC bool) ([]by
 	return fullMsg, nil
 }
 
-// crc16 calculates the Modbus CRC-16
+// crc16 calculates the Modbus CRC-16.
 func crc16(data []byte) uint16 {
 	var crc uint16 = 0xFFFF
 	for _, b := range data {
 		crc ^= uint16(b)
-		for i := 0; i < 8; i++ {
+		for range 8 {
 			if crc&0x0001 != 0 {
 				crc = (crc >> 1) ^ 0xA001
 			} else {

@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-// MPUMessageReader for reading MPU Switch format iso8583
+// MPUMessageReader for reading MPU Switch format iso8583.
 type MPUMessageReader struct {
 }
 

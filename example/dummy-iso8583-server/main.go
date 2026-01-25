@@ -51,7 +51,7 @@ func main() {
 		fmt.Println(err)
 		return
 	}
-	defer l.Close()
+	defer func() { _ = l.Close() }()
 
 	count := 0
 	for {
