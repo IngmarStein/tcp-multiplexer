@@ -22,11 +22,6 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version: 'stable'
-      - name: Lint Go
-        uses: golangci/golangci-lint-action@v9
-        with:
-          version: latest
-          args: --timeout=5m
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
