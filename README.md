@@ -56,14 +56,16 @@ are supported currently:
 3. iso8583: with 2 bytes header of the length of iso8583 message
 4. modbus-tcp
 5. modbus-rtu: Modbus RTU over TCP (includes CRC)
+6. modbus-serial: Raw Modbus RTU (serial) over TCP
 
 ```
-$ ./tcp-multiplexer list                                    
+$ ./tcp-multiplexer list
 * iso8583
 * echo
 * http
 * modbus
 * modbus-rtu
+* modbus-serial
 
 usage for example: ./tcp-multiplexer server -p echo
 ```
