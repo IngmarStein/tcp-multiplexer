@@ -50,5 +50,5 @@ func Execute() {
 
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose log")
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "debug", "d", false, "debug log")
+	rootCmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "debug log")
 }

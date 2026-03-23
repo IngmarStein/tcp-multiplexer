@@ -113,7 +113,7 @@ func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContai
 	}(conn)
 
 	sender <- &reqContainer{typ: Connection}
-	callback := make(chan *respContainer)
+	callback := make(chan *respContainer, 1)
 
 	for {
 		err := conn.SetReadDeadline(mux.deadline())
@@ -183,27 +183,6 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 	nextRetry := time.Now()
 	var lastErr error
 
-	replyTimer := time.NewTimer(time.Second)
-	if !replyTimer.Stop() {
-		<-replyTimer.C
-	}
-	defer replyTimer.Stop()
-
-	reply := func(c *reqContainer, r *respContainer) {
-		replyTimer.Reset(time.Second)
-		select {
-		case c.sender <- r:
-			if !replyTimer.Stop() {
-				select {
-				case <-replyTimer.C:
-				default:
-				}
-			}
-		case <-replyTimer.C:
-			slog.Warn("failed to send response to client", "error", "timeout")
-		}
-	}
-
 	for container := range requestQueue {
 		switch container.typ {
 		case Connection:
@@ -227,9 +206,9 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 
 		if conn == nil {
 			if time.Now().Before(nextRetry) {
-				reply(container, &respContainer{
+				container.sender <- &respContainer{
 					err: lastErr,
-				})
+				}
 				continue
 			}
 
@@ -239,9 +218,9 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 				if mux.retryDelay > 0 {
 					nextRetry = time.Now().Add(mux.retryDelay)
 				}
-				reply(container, &respContainer{
+				container.sender <- &respContainer{
 					err: lastErr,
-				})
+				}
 				continue
 			}
 			conn = c
@@ -254,9 +233,9 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 
 		_, err = conn.Write(container.message)
 		if err != nil {
-			reply(container, &respContainer{
+			container.sender <- &respContainer{
 				err: err,
-			})
+			}
 
 			slog.Error("target connection error during write", "error", err)
 			// renew conn
@@ -274,10 +253,10 @@ func (mux *Multiplexer) targetConnLoop(requestQueue <-chan *reqContainer) {
 		}
 
 		msg, err := mux.messageReader.ReadMessage(conn)
-		reply(container, &respContainer{
+		container.sender <- &respContainer{
 			message: msg,
 			err:     err,
-		})
+		}
 
 		slog.Debug("message from target server", "hex", fmt.Sprintf("%x", msg))
 
