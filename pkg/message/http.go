@@ -96,15 +96,18 @@ func (H HTTPMessageReader) ReadMessage(conn io.Reader) ([]byte, error) {
 			}
 
 			body = make([]byte, size)
-			_, err = tp.R.Read(body)
+			_, err = io.ReadFull(tp.R, body)
 			if err != nil {
 				return nil, err
 			}
 		}
 	}
 
-	// Note: 4. Transfer-Encoding
+	// 4. Transfer-Encoding
 	// https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Transfer-Encoding
+	if _, ok := headers["Transfer-Encoding"]; ok {
+		return nil, errors.New("Transfer-Encoding is not supported")
+	}
 
 	msg := dumpHTTPMessage(startLine, headers, body)
 

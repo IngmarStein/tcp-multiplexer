@@ -12,7 +12,7 @@ type MPUMessageReader struct {
 func (M MPUMessageReader) ReadMessage(conn io.Reader) ([]byte, error) {
 	// message header is 4-byte ASCII
 	header := make([]byte, 4)
-	_, err := conn.Read(header)
+	_, err := io.ReadFull(conn, header)
 	if err != nil {
 		return nil, err
 	}
@@ -24,7 +24,7 @@ func (M MPUMessageReader) ReadMessage(conn io.Reader) ([]byte, error) {
 	}
 
 	isoMsg := make([]byte, length)
-	_, err = conn.Read(isoMsg)
+	_, err = io.ReadFull(conn, isoMsg)
 	if err != nil {
 		return nil, err
 	}

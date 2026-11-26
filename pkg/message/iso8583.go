@@ -18,7 +18,7 @@ func (I ISO8583MessageReader) Name() string {
 // otherwise, we have to parse iso8583 message.
 func (I ISO8583MessageReader) ReadMessage(conn io.Reader) ([]byte, error) {
 	header := make([]byte, 2)
-	_, err := conn.Read(header)
+	_, err := io.ReadFull(conn, header)
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +30,7 @@ func (I ISO8583MessageReader) ReadMessage(conn io.Reader) ([]byte, error) {
 	}
 
 	isoMsg := make([]byte, length)
-	_, err = conn.Read(isoMsg)
+	_, err = io.ReadFull(conn, isoMsg)
 	if err != nil {
 		return nil, err
 	}
