@@ -1,6 +1,8 @@
 package multiplexer
 
 import (
+	"bufio"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log/slog"
@@ -26,6 +28,8 @@ type (
 	}
 
 	Multiplexer struct {
+		TLSConfig     *tls.Config
+		DropTLS       bool
 		targetServer  string
 		port          string
 		messageReader message.Reader
@@ -38,6 +42,33 @@ type (
 		requestQueue  chan *reqContainer
 	}
 )
+
+type bufferedConn struct {
+	net.Conn
+	reader *bufio.Reader
+}
+
+func (c *bufferedConn) Read(p []byte) (int, error) {
+	return c.reader.Read(p)
+}
+
+func isTLSClientHello(reader *bufio.Reader) (bool, error) {
+	prefix, err := reader.Peek(3)
+	if err != nil {
+		return false, err
+	}
+	// Valid Modbus TCP has protocol ID 0, so its third byte cannot match.
+	if prefix[0] != 0x16 || prefix[1] != 0x03 || prefix[2] < 0x01 || prefix[2] > 0x04 {
+		return false, nil
+	}
+	header, err := reader.Peek(9)
+	if err != nil {
+		return false, err
+	}
+	recordLength := int(header[3])<<8 | int(header[4])
+	helloLength := int(header[6])<<16 | int(header[7])<<8 | int(header[8])
+	return recordLength >= 4 && recordLength <= 16384 && header[5] == 1 && helloLength >= 41, nil
+}
 
 const (
 	Connection messageType = iota
@@ -94,25 +125,67 @@ L:
 			}
 		}
 		count++
-		slog.Info("new connection", "id", count, "remote", conn.RemoteAddr(), "local", conn.LocalAddr())
+		id := count
 
 		wg.Go(func() {
-			mux.handleConnection(conn, requestQueue)
+			mux.handleConnection(conn, requestQueue, id)
 		})
 	}
 }
 
-func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContainer) {
+func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContainer, id int) {
+	registered := false
 	defer func(c net.Conn) {
 		slog.Debug("closing client connection", "remote", c.RemoteAddr())
 		err := c.Close()
-		sender <- &reqContainer{typ: Disconnection}
+		if registered {
+			sender <- &reqContainer{typ: Disconnection}
+		}
 		if err != nil {
 			slog.Error("error closing client connection", "error", err)
 		}
 	}(conn)
 
+	clientTLS := false
+	if mux.TLSConfig != nil || mux.DropTLS {
+		if err := conn.SetDeadline(mux.deadline()); err != nil {
+			slog.Error("error setting client deadline", "error", err)
+			return
+		}
+		reader := bufio.NewReader(conn)
+		tlsHello, err := isTLSClientHello(reader)
+		if err != nil {
+			if err == io.EOF && reader.Buffered() == 0 {
+				slog.Info("closed connection", "remote", conn.RemoteAddr(), "local", conn.LocalAddr())
+				return
+			}
+			slog.Error("error detecting client protocol", "remote", conn.RemoteAddr(), "error", err)
+			return
+		}
+		conn = &bufferedConn{Conn: conn, reader: reader}
+		if tlsHello {
+			if mux.DropTLS {
+				slog.Debug("TLS client connection dropped", "remote", conn.RemoteAddr(), "reason", "TLS drop mode")
+				return
+			}
+			secureConn := tls.Server(conn, mux.TLSConfig)
+			if err := secureConn.Handshake(); err != nil {
+				slog.Error("TLS handshake failed", "remote", conn.RemoteAddr(), "error", err)
+				return
+			}
+			state := secureConn.ConnectionState()
+			slog.Info("TLS handshake completed", "remote", conn.RemoteAddr(),
+				"version", fmt.Sprintf("0x%04x", state.Version),
+				"cipher", tls.CipherSuiteName(state.CipherSuite),
+				"alpn", state.NegotiatedProtocol)
+			conn = secureConn
+			clientTLS = true
+		}
+	}
+
+	slog.Info("new connection", "id", id, "remote", conn.RemoteAddr(), "local", conn.LocalAddr())
 	sender <- &reqContainer{typ: Connection}
+	registered = true
 	callback := make(chan *respContainer, 1)
 
 	for {
@@ -127,6 +200,10 @@ func (mux *Multiplexer) handleConnection(conn net.Conn, sender chan<- *reqContai
 		}
 		if err != nil {
 			slog.Error("error reading from client", "error", err)
+			break
+		}
+		if clientTLS && (len(msg) < 8 || msg[2] != 0 || msg[3] != 0) {
+			slog.Error("TLS client sent an invalid Modbus TCP frame", "remote", conn.RemoteAddr())
 			break
 		}
 

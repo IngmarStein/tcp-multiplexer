@@ -102,6 +102,57 @@ docker run ghcr.io/ingmarstein/tcp-multiplexer server -t 127.0.0.1:1234 -l 8000 
 
 Alternatively, use the included `compose.yml` file as a template if you prefer to use Docker Compose.
 
+## TLS handling for Modbus TCP
+
+### Drop unwanted TLS connections without certificates
+
+Enable `--tls-drop` with `-p modbus` to close incoming TLS ClientHello
+connections without performing a handshake or forwarding TLS data to the
+target. No certificate or private key is needed. A drop logs
+`TLS client connection dropped` only at DEBUG level (`-d` / `--debug`), not
+at INFO (`-v`). The startup message `TLS drop mode enabled` remains at INFO.
+Dropped clients do not produce `new connection` or `connected clients`
+messages: registration happens after protocol detection, or after a successful
+handshake in termination mode. Only registered clients are unregistered.
+Other protocol errors and timeouts remain errors.
+
+Detection peeks at the TLS record and ClientHello headers with the configured
+client timeout; it does not consume bytes from plaintext connections. Valid
+Modbus TCP uses protocol ID zero, which cannot match the TLS record-version
+bytes, even when its transaction ID is `0x1603`. Existing plaintext clients
+continue to share the target connection when a TLS client is dropped.
+The client may reconnect repeatedly; dropping does not make its TLS service
+functional. An incomplete or malformed TLS header is not silently ignored.
+
+`--tls-drop` is opt-in, Modbus-only, and cannot be combined with `--tls-cert`
+or `--tls-key`. Without these options, the original plaintext behavior remains.
+
+### Optional TLS termination
+
+The multiplexer can accept plaintext Modbus TCP and TLS-wrapped Modbus TCP on the same
+listener. Enable it with both `--tls-cert` and `--tls-key`, pointing to a PEM
+server certificate and its private key. TLS is terminated per client; decrypted
+Modbus requests use the existing shared plaintext connection to the target.
+The minimum TLS version is 1.2. The listener does not authenticate clients with
+client certificates, and plaintext connections are still accepted.
+
+At INFO level (`-v`), a parsed ClientHello logs the source, SNI, offered TLS
+versions, cipher suites, signature schemes and ALPN protocols. A successful
+handshake logs the negotiated version and cipher. Handshake failures and invalid
+decrypted Modbus frames are errors. These diagnostics cannot establish which
+certificate authorities the client trusts, whether it will accept the chosen
+certificate, or which application protocol it sends after the handshake. The
+captured Huawei ClientHello does not establish that its application protocol is
+Modbus TCP; use this feature only as a test of that hypothesis. If decrypted
+data is not Modbus TCP, TLS support will not provide the service the client
+expects. Do not send private keys, passwords or full packet captures in logs.
+
+Missing or invalid certificate files cause an explicit startup failure. If the
+Wallbox rejects the certificate, inspect its TLS error and the configured trust
+on the Wallbox; do not disable certificate validation to force a connection.
+Even a successful handshake does not prove that the Wallbox sent Modbus or
+that charging, metering or energy-management functionality works.
+
 ## Testing
 
 Start echo server (listen on port 1234)
