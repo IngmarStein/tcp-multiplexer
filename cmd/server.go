@@ -23,6 +23,8 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"crypto/tls"
+	"fmt"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -41,6 +43,9 @@ var (
 	timeout             int
 	delay               time.Duration
 	retryDelay          time.Duration
+	tlsCertFile         string
+	tlsKeyFile          string
+	tlsDrop             bool
 )
 
 // serverCmd represents the server command.
@@ -69,6 +74,43 @@ var serverCmd = &cobra.Command{
 		}
 
 		mux := multiplexer.New(targetServer, port, msgReader, delay, time.Duration(timeout)*time.Second, retryDelay)
+		if applicationProtocol != "modbus" && (tlsDrop || tlsCertFile != "" || tlsKeyFile != "") {
+			slog.Error("TLS handling is supported only with --applicationProtocol modbus")
+			os.Exit(2)
+		}
+		if tlsDrop {
+			if tlsCertFile != "" || tlsKeyFile != "" {
+				slog.Error("--tls-drop cannot be combined with --tls-cert or --tls-key")
+				os.Exit(2)
+			}
+			mux.DropTLS = true
+			slog.Info("TLS drop mode enabled")
+		}
+		if tlsCertFile != "" || tlsKeyFile != "" {
+			if tlsCertFile == "" || tlsKeyFile == "" {
+				slog.Error("both --tls-cert and --tls-key are required")
+				os.Exit(2)
+			}
+			cert, err := tls.LoadX509KeyPair(tlsCertFile, tlsKeyFile)
+			if err != nil {
+				slog.Error("failed to load TLS certificate and key", "error", err)
+				os.Exit(2)
+			}
+			mux.TLSConfig = &tls.Config{
+				MinVersion:   tls.VersionTLS12,
+				Certificates: []tls.Certificate{cert},
+				GetConfigForClient: func(hello *tls.ClientHelloInfo) (*tls.Config, error) {
+					slog.Info("TLS client hello",
+						"remote", hello.Conn.RemoteAddr(),
+						"server_name", hello.ServerName,
+						"versions", fmt.Sprintf("%#x", hello.SupportedVersions),
+						"cipher_suites", fmt.Sprintf("%#x", hello.CipherSuites),
+						"signature_schemes", fmt.Sprintf("%v", hello.SignatureSchemes),
+						"alpn", hello.SupportedProtos)
+					return nil, nil
+				},
+			}
+		}
 		go func() {
 			err := mux.Start()
 			if err != nil {
@@ -102,4 +144,7 @@ func init() {
 	serverCmd.Flags().IntVar(&timeout, "timeout", 60, "timeout in seconds")
 	serverCmd.Flags().DurationVar(&delay, "delay", 0, "delay after connect")
 	serverCmd.Flags().DurationVar(&retryDelay, "retryDelay", 1*time.Second, "delay before retrying target connection")
+	serverCmd.Flags().StringVar(&tlsCertFile, "tls-cert", "", "PEM server certificate for optional TLS clients (modbus only)")
+	serverCmd.Flags().StringVar(&tlsKeyFile, "tls-key", "", "PEM server private key for optional TLS clients (modbus only)")
+	serverCmd.Flags().BoolVar(&tlsDrop, "tls-drop", false, "close TLS ClientHello connections without certificates; preserve plaintext Modbus TCP")
 }
